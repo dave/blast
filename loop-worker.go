@@ -70,6 +70,9 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 					atomic.AddUint64(&b.stats.itemsStarted, 1)
 
 					success := true
+					if len(b.config.PayloadVariants) == 0 {
+						panic("no payload variants")
+					}
 					for _, variationData := range b.config.PayloadVariants {
 						atomic.AddUint64(&b.stats.requestsStarted, 1)
 						start := time.Now()
