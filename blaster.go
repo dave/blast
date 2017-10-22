@@ -33,6 +33,7 @@ type Blaster struct {
 	dataFinishedChannel    chan struct{}
 	workersFinishedChannel chan struct{}
 	changeRateChannel      chan float64
+	signalChannel          chan os.Signal
 
 	mainWait   *sync.WaitGroup
 	workerWait *sync.WaitGroup
@@ -59,25 +60,9 @@ type statsDef struct {
 	ticksSkipped uint64
 }
 
-func New(ctx context.Context) *Blaster {
+func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 
-	// trap Ctrl+C and call cancel on the context
-	ctx, cancel := context.WithCancel(ctx)
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	defer func() {
-		signal.Stop(c)
-		cancel()
-	}()
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-
-	return &Blaster{
+	b := &Blaster{
 		cancel:                 cancel,
 		mainWait:               new(sync.WaitGroup),
 		workerWait:             new(sync.WaitGroup),
@@ -89,6 +74,24 @@ func New(ctx context.Context) *Blaster {
 			requestsDurationQueue: &FiloQueue{},
 		},
 	}
+
+	// trap Ctrl+C and call cancel on the context
+	b.signalChannel = make(chan os.Signal, 1)
+	signal.Notify(b.signalChannel, os.Interrupt)
+	go func() {
+		select {
+		case <-b.signalChannel:
+			b.cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	return b
+}
+
+func (b *Blaster) Exit() {
+	signal.Stop(b.signalChannel)
+	b.cancel()
 }
 
 func (b *Blaster) Start(ctx context.Context) error {
