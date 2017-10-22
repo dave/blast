@@ -1,0 +1,12 @@
+{
+	"data": "data.csv",
+	"log": "out.log",
+	"resume": true,
+	"rate": 10,
+	"workers": 5,
+	"worker-type": "http", 
+	"payload-template": {
+		"method": "GET",
+		"url": "http://www.{{domain}}.com/"
+	}
+}
