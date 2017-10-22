@@ -20,6 +20,11 @@ log
 ---
 The filename of the log file to create or append to.
 
+log-data
+--------
+Optional array of data items to add to the log file. Note adding lots of items to the log can 
+affect performance.
+
 resume
 ------
 If resume is true, the previous log file is loaded, and items that were successful are skipped.

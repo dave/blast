@@ -96,9 +96,15 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 
 					atomic.AddUint64(&b.stats.itemsFinished, 1)
 
+					var extraFields []string
+					for _, key := range b.config.LogData {
+						extraFields = append(extraFields, data[key])
+					}
+
 					lr := logRecord{
 						PayloadHash: work.Hash,
 						Result:      success,
+						ExtraFields: extraFields,
 					}
 					b.logChannel <- lr
 					atomic.AddInt64(&b.stats.workersBusy, -1)
