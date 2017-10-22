@@ -18,7 +18,6 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 	readString := func() chan string {
 		c := make(chan string)
 		go func() {
-			fmt.Println("New rate?")
 			reader := bufio.NewReader(os.Stdin)
 			text, _ := reader.ReadString('\n')
 			c <- text

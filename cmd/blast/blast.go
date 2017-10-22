@@ -11,9 +11,10 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	b := blast.New(ctx)
+	b := blast.New(ctx, cancel)
+	defer b.Exit()
 
 	b.RegisterWorkerType("http", httpworker.New)
 
