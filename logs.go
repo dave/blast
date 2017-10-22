@@ -7,6 +7,9 @@ import (
 	"os"
 	"strconv"
 
+	"strings"
+
+	"github.com/leemcloughlin/gofarmhash"
 	"github.com/pkg/errors"
 )
 
@@ -30,10 +33,18 @@ func (b *Blaster) loadPreviousLogs() error {
 	}
 
 	if fs.Size() > 1<<20 {
-		fmt.Printf("Logs are %v MB, loading can take some time...\n", fs.Size()/(1<<20))
+		fmt.Fprintf(b.out, "Logs are %v MB, loading can take some time...\n", fs.Size()/(1<<20))
 	}
 
-	logReader := csv.NewReader(logFile)
+	if err := b.loadPreviousLogsFromReader(logFile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Blaster) loadPreviousLogsFromReader(r io.Reader) error {
+	logReader := csv.NewReader(r)
 	// skip header
 	if _, err := logReader.Read(); err != nil {
 		if err == io.EOF {
@@ -55,12 +66,11 @@ func (b *Blaster) loadPreviousLogs() error {
 		}
 		if lr.Result {
 			if b.skip == nil {
-				b.skip = make(map[string]struct{})
+				b.skip = make(map[farmhash.Uint128]struct{})
 			}
 			b.skip[lr.PayloadHash] = struct{}{}
 		}
 	}
-
 	return nil
 }
 
@@ -76,22 +86,23 @@ func (b *Blaster) openLogAndInit() error {
 		_ = os.Remove(b.config.Log) // ignore error
 	}
 
-	var err error
-	if b.logFile, err = os.OpenFile(b.config.Log, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666); err != nil {
-		return errors.WithStack(err)
-	}
-	s, err := b.logFile.Stat()
+	logFile, err := os.OpenFile(b.config.Log, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	b.logWriter = csv.NewWriter(b.logFile)
+	s, err := logFile.Stat()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	b.logWriter = csv.NewWriter(logFile)
+	b.logCloser = logFile
 	if s.Size() == 0 {
 		fields := append([]string{"payload-hash", "result"}, b.config.LogData...)
 		if err := b.logWriter.Write(fields); err != nil {
 			return errors.WithStack(err)
 		}
 	} else {
-		b.logFile.WriteString("\n")
+		logFile.WriteString("\n")
 	}
 
 	return nil
@@ -99,29 +110,38 @@ func (b *Blaster) openLogAndInit() error {
 
 func (b *Blaster) flushAndCloseLog() {
 	b.logWriter.Flush()
-	_ = b.logFile.Close() // ignore error
+	_ = b.logCloser.Close() // ignore error
 }
 
 type logRecord struct {
-	PayloadHash string
+	PayloadHash farmhash.Uint128
 	Result      bool
 	ExtraFields []string
 }
 
 func (l logRecord) ToCsv() []string {
 	out := []string{
-		fmt.Sprint(l.PayloadHash),
+		fmt.Sprintf("%x|%x", l.PayloadHash.First, l.PayloadHash.Second),
 		fmt.Sprint(l.Result),
 	}
 	return append(out, l.ExtraFields...)
 }
 
 func (l *logRecord) FromCsv(in []string) error {
-	l.PayloadHash = in[0]
-	result, err := strconv.ParseBool(in[1])
+	var err error
+	s := in[0]
+	pos := strings.Index(s, "|")
+	l.PayloadHash.First, err = strconv.ParseUint(s[:pos], 16, 64)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	l.Result = result
+	l.PayloadHash.Second, err = strconv.ParseUint(s[pos+1:], 16, 64)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	l.Result, err = strconv.ParseBool(in[1])
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	return nil
 }

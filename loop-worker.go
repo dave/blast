@@ -38,7 +38,7 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 
 		b.workerWait.Add(1)
 		go func(index int) {
-			defer fmt.Println("Exiting worker", index)
+			defer fmt.Fprintln(b.out, "Exiting worker", index)
 			defer func() {
 				if s, ok := w.(Stopper); ok {
 					workerSetup := replaceMap(b.config.WorkerTemplate, workerVariantData)

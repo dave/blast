@@ -26,7 +26,7 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 	}
 
 	go func() {
-		defer fmt.Println("Exiting rate loop")
+		defer fmt.Fprintln(b.out, "Exiting rate loop")
 		defer b.mainWait.Done()
 		for {
 			select {
@@ -57,7 +57,7 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 		Set(b.config.MaxLatency / 100.0)
 
 	go func() {
-		defer fmt.Println("Exiting rate loop")
+		defer fmt.Fprintln(b.out, "Exiting rate loop")
 		defer b.mainWait.Done()
 		for {
 			select {
@@ -78,7 +78,7 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 					} else {
 						b.changeRateChannel <- b.rate + delta
 					}
-					//fmt.Println("Rate changed to", b.rate+delta)
+					//fmt.Fprintln(b.out, "Rate changed to", b.rate+delta)
 				}
 			}
 		}
