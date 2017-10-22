@@ -14,7 +14,7 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 5)
 
 	go func() {
-		defer fmt.Println("Exiting status loop")
+		defer fmt.Fprintln(b.out, "Exiting status loop")
 		defer b.mainWait.Done()
 		for {
 			select {
@@ -38,7 +38,7 @@ func (b *Blaster) printStatus() {
 	if success > INSTANT_COUNT {
 		durationInstant = b.stats.requestsDurationQueue.Sum() / INSTANT_COUNT
 	}
-	fmt.Printf(`
+	fmt.Fprintf(b.out, `
 Status
 ======
 Rate:          %.0f items / second
@@ -88,8 +88,8 @@ func (f *FiloQueue) Add(v uint64) {
 func (f *FiloQueue) Sum() uint64 {
 	f.m.Lock()
 	defer f.m.Unlock()
-	var sum uint64
-	for _, v := range f.data {
+	var sum uint64 
+	for _,v := range f.data {
 		sum += v
 	}
 	return sum

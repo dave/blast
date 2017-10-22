@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"io"
 
-	"encoding/base64"
 	"encoding/json"
 
 	"sync/atomic"
 
+	"github.com/leemcloughlin/gofarmhash"
 	"github.com/pkg/errors"
-	"github.com/surge/cityhash"
 )
 
 func (b *Blaster) startMainLoop(ctx context.Context) {
@@ -20,7 +19,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 	b.mainChannel = make(chan struct{})
 
 	go func() {
-		defer fmt.Println("Exiting main loop")
+		defer fmt.Fprintln(b.out, "Exiting main loop")
 		defer b.mainWait.Done()
 		for {
 			select {
@@ -31,7 +30,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 					record, err := b.dataReader.Read()
 					if err != nil {
 						if err == io.EOF {
-							fmt.Println("Found end of data file")
+							fmt.Fprintln(b.out, "Found end of data file")
 							// finish gracefully
 							close(b.dataFinishedChannel)
 							return
@@ -44,7 +43,8 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 						b.errorChannel <- errors.WithStack(err)
 						return
 					}
-					hash := base64.StdEncoding.EncodeToString(cityhash.New64().Sum(j))
+					hash := farmhash.Hash128(j)
+					//hash := binary.BigEndian.Uint64(cityhash.New64().Sum(j))
 					if b.skip != nil {
 						if _, skip := b.skip[hash]; skip {
 							atomic.AddUint64(&b.stats.itemsSkipped, 1)
@@ -61,5 +61,5 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 
 type workDef struct {
 	Record []string
-	Hash   string
+	Hash   farmhash.Uint128
 }

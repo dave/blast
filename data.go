@@ -7,12 +7,15 @@ import (
 	"context"
 	"strings"
 
+	"io"
+
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 )
 
 func (b *Blaster) openDataFile(ctx context.Context) error {
 	var err error
+	var rc io.ReadCloser
 	if strings.HasPrefix(b.config.Data, "gs://") {
 		name := strings.TrimPrefix(b.config.Data, "gs://")
 		bucket := name[:strings.Index(name, "/")]
@@ -21,17 +24,18 @@ func (b *Blaster) openDataFile(ctx context.Context) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		b.dataReadCloser, err = client.Bucket(bucket).Object(handle).NewReader(ctx)
+		rc, err = client.Bucket(bucket).Object(handle).NewReader(ctx)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 	} else {
-		b.dataReadCloser, err = os.Open(b.config.Data)
+		rc, err = os.Open(b.config.Data)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 	}
-	b.dataReader = csv.NewReader(b.dataReadCloser)
+	b.dataCloser = rc
+	b.dataReader = csv.NewReader(rc)
 	b.dataHeaders, err = b.dataReader.Read()
 	if err != nil {
 		return errors.WithStack(err)
@@ -40,5 +44,5 @@ func (b *Blaster) openDataFile(ctx context.Context) error {
 }
 
 func (b *Blaster) closeDataFile() {
-	_ = b.dataReadCloser.Close() // ignore error
+	_ = b.dataCloser.Close() // ignore error
 }

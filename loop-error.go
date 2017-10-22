@@ -11,7 +11,7 @@ func (b *Blaster) startErrorLoop(ctx context.Context) {
 	b.errorChannel = make(chan error)
 
 	go func() {
-		defer fmt.Println("Exiting error loop")
+		defer fmt.Fprintln(b.out, "Exiting error loop")
 		defer b.mainWait.Done()
 		for {
 			select {
@@ -20,7 +20,7 @@ func (b *Blaster) startErrorLoop(ctx context.Context) {
 				// exit gracefully
 				return
 			case err := <-b.errorChannel:
-				fmt.Printf("%+v\n", err)
+				fmt.Fprintf(b.out, "%+v\n", err)
 				b.cancel()
 				return
 			}

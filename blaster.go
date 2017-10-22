@@ -2,7 +2,6 @@ package blast
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -10,21 +9,23 @@ import (
 	"runtime"
 	"sync"
 	"time"
+	"github.com/leemcloughlin/gofarmhash"
 )
 
 const DEBUG = false
 const INSTANT_COUNT = 100
 
 type Blaster struct {
-	config         *configDef
-	rate           float64
-	skip           map[string]struct{}
-	dataReadCloser io.ReadCloser
-	dataReader     *csv.Reader
-	dataHeaders    []string
-	logFile        *os.File
-	logWriter      *csv.Writer
-	cancel         context.CancelFunc
+	config      *configDef
+	rate        float64
+	skip        map[farmhash.Uint128]struct{}
+	dataCloser  io.Closer
+	dataReader  DataReader
+	dataHeaders []string
+	logCloser   io.Closer
+	logWriter   LogWriteFlusher
+	cancel      context.CancelFunc
+	out         io.Writer
 
 	mainChannel            chan struct{}
 	errorChannel           chan error
@@ -41,6 +42,15 @@ type Blaster struct {
 	workerTypes map[string]func() Worker
 
 	stats statsDef
+}
+
+type DataReader interface {
+	Read() (record []string, err error)
+}
+
+type LogWriteFlusher interface {
+	Write(record []string) error
+	Flush()
 }
 
 type statsDef struct {
@@ -95,6 +105,8 @@ func (b *Blaster) Exit() {
 }
 
 func (b *Blaster) Start(ctx context.Context) error {
+	
+	b.out = os.Stdout
 
 	if err := b.loadConfig(); err != nil {
 		return err
@@ -109,6 +121,11 @@ func (b *Blaster) Start(ctx context.Context) error {
 		return err
 	}
 	defer b.flushAndCloseLog()
+
+	return b.start(ctx)
+}
+
+func (b *Blaster) start(ctx context.Context) error {
 
 	b.startTickerLoop(ctx)
 	b.startMainLoop(ctx)
@@ -126,13 +143,13 @@ func (b *Blaster) Start(ctx context.Context) error {
 	case <-b.dataFinishedChannel:
 	}
 
-	fmt.Println("Waiting for workers to finish...")
+	fmt.Fprintln(b.out, "Waiting for workers to finish...")
 	b.workerWait.Wait()
 
 	// signal to log and error loop that it's tine to exit
 	close(b.workersFinishedChannel)
 
-	fmt.Println("Waiting for processes to finish...")
+	fmt.Fprintln(b.out, "Waiting for processes to finish...")
 	b.mainWait.Wait()
 
 	b.printStatus()

@@ -11,7 +11,7 @@ func (b *Blaster) startLogLoop(ctx context.Context) {
 	b.logChannel = make(chan logRecord)
 
 	go func() {
-		defer fmt.Println("Exiting log loop")
+		defer fmt.Fprintln(b.out, "Exiting log loop")
 		defer b.mainWait.Done()
 		var count uint64
 		for {
