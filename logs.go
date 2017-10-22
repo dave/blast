@@ -86,7 +86,8 @@ func (b *Blaster) openLogAndInit() error {
 	}
 	b.logWriter = csv.NewWriter(b.logFile)
 	if s.Size() == 0 {
-		if err := b.logWriter.Write([]string{"PayloadHash", "Result"}); err != nil {
+		fields := append([]string{"payload-hash", "result"}, b.config.LogData...)
+		if err := b.logWriter.Write(fields); err != nil {
 			return errors.WithStack(err)
 		}
 	} else {
@@ -104,13 +105,15 @@ func (b *Blaster) flushAndCloseLog() {
 type logRecord struct {
 	PayloadHash string
 	Result      bool
+	ExtraFields []string
 }
 
 func (l logRecord) ToCsv() []string {
-	return []string{
+	out := []string{
 		fmt.Sprint(l.PayloadHash),
 		fmt.Sprint(l.Result),
 	}
+	return append(out, l.ExtraFields...)
 }
 
 func (l *logRecord) FromCsv(in []string) error {

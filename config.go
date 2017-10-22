@@ -10,6 +10,7 @@ import (
 type configDef struct {
 	Data            string                 `json:"data"`
 	Log             string                 `json:"log"`
+	LogData         []string               `json:"log-data"`
 	Resume          bool                   `json:"resume"`
 	Rate            float64                `json:"rate"`
 	Workers         int                    `json:"workers"`
