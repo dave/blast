@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync"
 	"time"
@@ -58,7 +59,24 @@ type statsDef struct {
 	ticksSkipped uint64
 }
 
-func New(cancel context.CancelFunc) *Blaster {
+func New(ctx context.Context) *Blaster {
+
+	// trap Ctrl+C and call cancel on the context
+	ctx, cancel := context.WithCancel(ctx)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	defer func() {
+		signal.Stop(c)
+		cancel()
+	}()
+	go func() {
+		select {
+		case <-c:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
 	return &Blaster{
 		cancel:                 cancel,
 		mainWait:               new(sync.WaitGroup),

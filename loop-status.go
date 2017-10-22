@@ -41,7 +41,7 @@ func (b *Blaster) printStatus() {
 	fmt.Printf(`
 Status
 ======
-Rate:          %.1f items / second
+Rate:          %.0f items / second
 Started:       %d items (%d requests)
 Finished:      %d items (%d requests)
 Success:       %d
