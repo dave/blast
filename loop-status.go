@@ -1,16 +1,17 @@
 package blast
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
-/*
 func (b *Blaster) startStatusLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second * 10)
 
 	go func() {
 		defer fmt.Fprintln(b.out, "Exiting status loop")
@@ -23,11 +24,11 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 				return
 			case <-ticker.C:
 				b.printStatus()
+				b.printRatePrompt()
 			}
 		}
 	}()
 }
-*/
 
 func (b *Blaster) printStatus() {
 	var durationTotal, durationInstant uint64

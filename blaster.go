@@ -136,7 +136,7 @@ func (b *Blaster) start(ctx context.Context) error {
 	b.startErrorLoop(ctx)
 	b.startWorkers(ctx)
 	b.startLogLoop(ctx)
-	//b.startStatusLoop(ctx)
+	b.startStatusLoop(ctx)
 	b.startRateLoop(ctx)
 
 	b.printRatePrompt()
