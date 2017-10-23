@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
 	"github.com/leemcloughlin/gofarmhash"
 )
 
@@ -16,16 +17,17 @@ const DEBUG = false
 const INSTANT_COUNT = 100
 
 type Blaster struct {
-	config      *configDef
-	rate        float64
-	skip        map[farmhash.Uint128]struct{}
-	dataCloser  io.Closer
-	dataReader  DataReader
-	dataHeaders []string
-	logCloser   io.Closer
-	logWriter   LogWriteFlusher
-	cancel      context.CancelFunc
-	out         io.Writer
+	config          *configDef
+	rate            float64
+	skip            map[farmhash.Uint128]struct{}
+	dataCloser      io.Closer
+	dataReader      DataReader
+	dataHeaders     []string
+	logCloser       io.Closer
+	logWriter       LogWriteFlusher
+	cancel          context.CancelFunc
+	out             io.Writer
+	rateInputReader io.Reader
 
 	mainChannel            chan struct{}
 	errorChannel           chan error
@@ -121,6 +123,8 @@ func (b *Blaster) Start(ctx context.Context) error {
 		return err
 	}
 	defer b.flushAndCloseLog()
+
+	b.rateInputReader = os.Stdin
 
 	return b.start(ctx)
 }

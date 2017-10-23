@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+
+	"io"
 
 	"github.com/pkg/errors"
 )
@@ -18,8 +19,15 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 	readString := func() chan string {
 		c := make(chan string)
 		go func() {
-			reader := bufio.NewReader(os.Stdin)
-			text, _ := reader.ReadString('\n')
+			reader := bufio.NewReader(b.rateInputReader)
+			text, err := reader.ReadString('\n')
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				b.errorChannel <- errors.WithStack(err)
+				return
+			}
 			c <- text
 		}()
 		return c
