@@ -43,7 +43,13 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 			case <-b.dataFinishedChannel:
 				return
 			case s := <-readString():
-				f, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+				s = strings.TrimSpace(s)
+				if s == "" {
+					b.printStatus()
+					b.printRatePrompt()
+					continue
+				}
+				f, err := strconv.ParseFloat(s, 64)
 				if err != nil {
 					b.errorChannel <- errors.WithStack(err)
 					return
@@ -52,7 +58,6 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 			}
 		}
 	}()
-
 }
 
 /*

@@ -1,13 +1,12 @@
 package blast
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
+/*
 func (b *Blaster) startStatusLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
@@ -28,6 +27,7 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 		}
 	}()
 }
+*/
 
 func (b *Blaster) printStatus() {
 	var durationTotal, durationInstant uint64
@@ -69,6 +69,16 @@ Skipped ticks: %d (when all workers are busy)
 	)
 }
 
+func (b *Blaster) printRatePrompt() {
+	fmt.Fprintf(b.out, `
+Current rate is %.0f items / second. Enter a new rate or press enter to view status.
+
+Rate?
+`,
+		b.rate,
+	)
+}
+
 type FiloQueue struct {
 	data   [INSTANT_COUNT]uint64
 	m      sync.Mutex
@@ -88,8 +98,8 @@ func (f *FiloQueue) Add(v uint64) {
 func (f *FiloQueue) Sum() uint64 {
 	f.m.Lock()
 	defer f.m.Unlock()
-	var sum uint64 
-	for _,v := range f.data {
+	var sum uint64
+	for _, v := range f.data {
 		sum += v
 	}
 	return sum

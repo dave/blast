@@ -107,7 +107,7 @@ func (b *Blaster) Exit() {
 }
 
 func (b *Blaster) Start(ctx context.Context) error {
-	
+
 	b.out = os.Stdout
 
 	if err := b.loadConfig(); err != nil {
@@ -136,10 +136,10 @@ func (b *Blaster) start(ctx context.Context) error {
 	b.startErrorLoop(ctx)
 	b.startWorkers(ctx)
 	b.startLogLoop(ctx)
-	b.startStatusLoop(ctx)
+	//b.startStatusLoop(ctx)
 	b.startRateLoop(ctx)
 
-	b.printStatus()
+	b.printRatePrompt()
 
 	// wait for cancel or finished
 	select {

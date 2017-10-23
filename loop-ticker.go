@@ -29,6 +29,7 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 				ticker.Stop()
 				ticker = time.NewTicker(time.Second / time.Duration(b.rate))
 				b.printStatus()
+				b.printRatePrompt()
 			case b.mainChannel <- struct{}{}:
 				// if main loop is waiting, send it a message
 			default:
