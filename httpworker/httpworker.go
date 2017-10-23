@@ -23,6 +23,7 @@ func (w *Worker) Send(ctx context.Context, payloadRaw map[string]interface{}) er
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	request = request.WithContext(ctx)
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return errors.WithStack(err)
