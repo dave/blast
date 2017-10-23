@@ -70,7 +70,7 @@ To do
 - [x] Load CSV from GCS?  
 - [x] Load CSV from file  
 - [x] Parse CSV  
-- [ ] Testing framework  
+- [x] Testing framework  
 - [x] Render template json into request  
 - [x] Make request  
 - [x] Save logs  
