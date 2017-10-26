@@ -43,8 +43,8 @@ func (b *Blaster) printStatus() {
 Status
 ======
 Rate:          %.0f items / second
-Started:       %d items (%d requests)
-Finished:      %d items (%d requests)
+Started:       %d items
+Finished:      %d items
 Success:       %d
 Failed:        %d
 Skipped:       %d (from previous run)
@@ -54,13 +54,11 @@ Skipped ticks: %d (when all workers are busy)
 
 `,
 		b.rate,
-		atomic.LoadUint64(&b.stats.itemsStarted),
 		atomic.LoadUint64(&b.stats.requestsStarted),
-		atomic.LoadUint64(&b.stats.itemsFinished),
 		atomic.LoadUint64(&b.stats.requestsFinished),
-		atomic.LoadUint64(&b.stats.itemsSuccess),
-		atomic.LoadUint64(&b.stats.itemsFailed),
-		atomic.LoadUint64(&b.stats.itemsSkipped),
+		atomic.LoadUint64(&b.stats.requestsSuccess),
+		atomic.LoadUint64(&b.stats.requestsFailed),
+		atomic.LoadUint64(&b.stats.requestsSkipped),
 		durationTotal,
 		INSTANT_COUNT,
 		durationInstant,

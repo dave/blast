@@ -61,9 +61,9 @@ func TestNew(t *testing.T) {
 
 	mustMatch(t, outbuf, 1, `\nSuccess\:\s+3\n`)
 
-	outLog.must(t, 1, []string{"3763b9c0e1b2307c|c1377b027e806557", "true"})
-	outLog.must(t, 2, []string{"db7a669e37739bf|b4a36ba02942a475", "true"})
-	outLog.must(t, 3, []string{"deb69562b047222|3cec67420f8a6588", "true"})
+	outLog.must(t, 1, []string{"45583464115695f2|e60a15c85c691ab8", "true"})
+	outLog.must(t, 2, []string{"6258a554f446f0a7|4111d6d36a631a68", "true"})
+	outLog.must(t, 3, []string{"d0e4144aef1f25ee|f44a70605aeac064", "true"})
 
 	b1, outbuf1 := defaultOptions(
 		ctx,
@@ -79,7 +79,7 @@ func TestNew(t *testing.T) {
 
 	mustMatch(t, outbuf1, 1, `\nSuccess\:\s+1\n`)
 	mustMatch(t, outbuf1, 1, `\nSkipped\:\s+3 \(from previous run\)\n`)
-	outLog.must(t, 4, []string{"73d81ec7b7251e65|fab9096e8c84809f", "true"})
+	outLog.must(t, 4, []string{"b0528e8eb39663df|9010bda07e0d725b", "true"})
 
 	b2, outbuf2 := defaultOptions(
 		ctx,
@@ -92,11 +92,7 @@ func TestNew(t *testing.T) {
 
 	must(t, b2.start(ctx))
 	mustMatch(t, outbuf2, 1, `\nFailed\:\s+1\n`)
-	outLog.must(t, 5, []string{"21e8bfb8d271d28d|c546009ae399ca09", "false"})
-
-	//for i, v := range outLog.Log {
-	//	fmt.Println(i, v)
-	//}
+	outLog.must(t, 5, []string{"d91d9c633503397f|8ecfa63bc2072fe5", "false"})
 
 }
 
@@ -191,6 +187,11 @@ type LoggingWriter struct {
 	Log [][]string
 }
 
+func (l *LoggingWriter) Debug() {
+	for _, v := range l.Log {
+		fmt.Println(v)
+	}
+}
 func (l *LoggingWriter) Write(record []string) error {
 	l.Log = append(l.Log, record)
 	return nil
@@ -278,7 +279,7 @@ func (l *LoggingWorkerLog) NewHang() Worker {
 	return &LoggingWorker{Log: l, Result: true, Hang: true}
 }
 
-func (l *LoggingWorker) Send(ctx context.Context, in map[string]interface{}) error {
+func (l *LoggingWorker) Send(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 	log := map[string]string{}
 	if l.Hang {
 		select {
@@ -293,9 +294,9 @@ func (l *LoggingWorker) Send(ctx context.Context, in map[string]interface{}) err
 	}
 	l.Log.Append(log)
 	if l.Result {
-		return nil
+		return nil, nil
 	}
-	return errors.New("fail")
+	return nil, errors.New("fail")
 }
 
 type DummyCloser struct{}

@@ -35,11 +35,11 @@ func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 	return nil
 }
 
-func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) error {
+func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[string]interface{}, error) {
 
 	var payload payloadConfig
 	if err := mapstructure.Decode(raw, &payload); err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
 	fmt.Printf("Dummy worker: Sending payload %s %s%s\n", payload.Method, w.base, payload.Path)
@@ -55,11 +55,12 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) error {
 
 	// Dummy worker - return an error sometimes
 	errorrand := r.Float64()
-	switch {
-	case errorrand > 0.9:
-		return errors.New("Error")
-	default:
-		return nil
+	if errorrand > 0.95 {
+		return map[string]interface{}{"code": 500}, errors.New("Error 500")
+	} else if errorrand > 0.7 {
+		return map[string]interface{}{"code": 404}, errors.New("Error 404")
+	} else {
+		return map[string]interface{}{"code": 200}, nil
 	}
 }
 

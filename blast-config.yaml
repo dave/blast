@@ -48,6 +48,24 @@ workers: 4
 worker-type: "dummy"
 
 # -------------------------
+#         log-data
+# -------------------------
+# Array of data fields to include in the output log. This may be set as a json encoded []string 
+# with the BLAST_LOG_DATA environment variable or the --log-data flag.")
+# -------------------------
+log-data:
+  - "user_name"
+
+# -------------------------
+#        log-output
+# -------------------------
+# Array of worker response fields to include in the output log. This may be set as a json encoded 
+# []string with the BLAST_LOG_OUTPUT environment variable or the --log-output flag.
+# -------------------------
+log-output:
+  - "code"
+
+# -------------------------
 #     payload-template
 # -------------------------
 # This template is rendered and passed to the worker `Send` method. This may be set as a json 

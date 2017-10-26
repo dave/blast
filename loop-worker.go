@@ -10,6 +10,9 @@ import (
 
 	"time"
 
+	"encoding/json"
+
+	"github.com/leemcloughlin/gofarmhash"
 	"github.com/pkg/errors"
 )
 
@@ -18,10 +21,10 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 	for i := 0; i < b.config.Workers; i++ {
 
 		// assign rotated vars from config
-		workerVariantData := map[string]string{}
+		workerVariationData := map[string]string{}
 		if b.config.WorkerVariants != nil {
 			for k, v := range b.config.WorkerVariants[i%len(b.config.WorkerVariants)] {
-				workerVariantData[k] = v
+				workerVariationData[k] = v
 			}
 		}
 
@@ -29,7 +32,7 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 		w := workerFunc()
 
 		if s, ok := w.(Starter); ok {
-			workerSetup := replaceMap(b.config.WorkerTemplate, workerVariantData)
+			workerSetup := replaceMap(b.config.WorkerTemplate, workerVariationData)
 			if err := s.Start(ctx, workerSetup); err != nil {
 				b.errorChannel <- errors.WithStack(err)
 				return
@@ -41,7 +44,7 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 			defer fmt.Fprintln(b.out, "Exiting worker", index)
 			defer func() {
 				if s, ok := w.(Stopper); ok {
-					workerSetup := replaceMap(b.config.WorkerTemplate, workerVariantData)
+					workerSetup := replaceMap(b.config.WorkerTemplate, workerVariationData)
 					if err := s.Stop(ctx, workerSetup); err != nil {
 						b.errorChannel <- errors.WithStack(err)
 						return
@@ -57,87 +60,90 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 					// exit gracefully
 					return
 				case work := <-b.workerChannel:
-					atomic.AddInt64(&b.stats.workersBusy, 1)
-
-					data := map[string]string{}
-					for k, v := range workerVariantData {
-						data[k] = v
-					}
-					for i, key := range b.dataHeaders {
-						data[key] = work.Record[i]
+					for _, payloadVariationData := range b.config.PayloadVariants {
+						atomic.AddInt64(&b.stats.workersBusy, 1)
+						b.send(ctx, w, workerVariationData, work, payloadVariationData)
+						atomic.AddInt64(&b.stats.workersBusy, -1)
 					}
 
-					atomic.AddUint64(&b.stats.itemsStarted, 1)
-
-					success := true
-					if len(b.config.PayloadVariants) == 0 {
-						panic("no payload variants")
-					}
-					for _, variationData := range b.config.PayloadVariants {
-						atomic.AddUint64(&b.stats.requestsStarted, 1)
-						start := time.Now()
-						if err := b.sendWithPayloadVariation(ctx, w, data, variationData); err != nil {
-							success = false
-						}
-						elapsed := time.Since(start).Nanoseconds() / 1000000
-						atomic.AddUint64(&b.stats.requestsFinished, 1)
-						if success {
-							// only log
-							atomic.AddUint64(&b.stats.requestsSuccess, 1)
-							atomic.AddUint64(&b.stats.requestsSuccessDuration, uint64(elapsed))
-							b.stats.requestsDurationQueue.Add(uint64(elapsed))
-						}
-						if !success {
-							break
-						}
-					}
-					if success {
-						atomic.AddUint64(&b.stats.itemsSuccess, 1)
-					} else {
-						atomic.AddUint64(&b.stats.itemsFailed, 1)
-					}
-
-					atomic.AddUint64(&b.stats.itemsFinished, 1)
-
-					var extraFields []string
-					for _, key := range b.config.LogData {
-						extraFields = append(extraFields, data[key])
-					}
-
-					lr := logRecord{
-						PayloadHash: work.Hash,
-						Result:      success,
-						ExtraFields: extraFields,
-					}
-					b.logChannel <- lr
-					atomic.AddInt64(&b.stats.workersBusy, -1)
 				}
 			}
 		}(i)
 	}
 }
 
-func (b *Blaster) sendWithPayloadVariation(ctx context.Context, w Worker, payloadData map[string]string, variationData map[string]string) error {
+func (b *Blaster) send(ctx context.Context, w Worker, workerVariantData map[string]string, work workDef, variationData map[string]string) {
 
 	data := map[string]string{}
-
-	for k, v := range payloadData {
+	for k, v := range workerVariantData {
+		data[k] = v
+	}
+	for i, k := range b.dataHeaders {
+		data[k] = work.Record[i]
+	}
+	for k, v := range variationData {
 		data[k] = v
 	}
 
-	if variationData != nil {
-		for k, v := range variationData {
-			data[k] = v
+	j, err := json.Marshal(data)
+	if err != nil {
+		b.errorChannel <- errors.WithStack(err)
+		return
+	}
+	hash := farmhash.Hash128(j)
+	if b.skip != nil {
+		if _, skip := b.skip[hash]; skip {
+			atomic.AddUint64(&b.stats.requestsSkipped, 1)
+			return
 		}
 	}
 
+	atomic.AddUint64(&b.stats.requestsStarted, 1)
+	start := time.Now()
 	renderedTemplate := replaceMap(b.config.PayloadTemplate, data)
 
-	if err := w.Send(ctx, renderedTemplate); err != nil {
-		return errors.WithStack(err)
+	success := true
+	out, err := w.Send(ctx, renderedTemplate)
+	if err != nil {
+		success = false
+	}
+	if out == nil {
+		out = map[string]interface{}{}
+	}
+	elapsed := time.Since(start).Nanoseconds() / 1000000
+	if success {
+		atomic.AddUint64(&b.stats.requestsSuccess, 1)
+		atomic.AddUint64(&b.stats.requestsSuccessDuration, uint64(elapsed))
+		b.stats.requestsDurationQueue.Add(uint64(elapsed))
+	} else {
+		atomic.AddUint64(&b.stats.requestsFailed, 1)
+	}
+	atomic.AddUint64(&b.stats.requestsFinished, 1)
+
+	var extraFields []string
+	for _, key := range b.config.LogData {
+		extraFields = append(extraFields, data[key])
+	}
+	for _, key := range b.config.LogOutput {
+		var val string
+		switch v := out[key].(type) {
+		case string:
+			val = v
+		case bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr, float32, float64, complex64, complex128:
+			val = fmt.Sprint(v)
+		default:
+			j, _ := json.Marshal(v)
+			val = string(j)
+		}
+		extraFields = append(extraFields, val)
 	}
 
-	return nil
+	lr := logRecord{
+		PayloadHash: hash,
+		Result:      success,
+		ExtraFields: extraFields,
+	}
+	b.logChannel <- lr
 }
 
 func replace(template interface{}, substitutions map[string]string) interface{} {

@@ -18,24 +18,24 @@ func New() blast.Worker {
 
 type Worker struct{}
 
-func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) error {
+func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (response map[string]interface{}, err error) {
 	var payload def
 	if err := mapstructure.Decode(&payload, raw); err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	request, err := http.NewRequest(payload.Method, payload.Url, bytes.NewBufferString(payload.Body))
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	request = request.WithContext(ctx)
-	response, err := http.DefaultClient.Do(request)
+	r, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return errors.WithStack(err)
+		return map[string]interface{}{"code": r.StatusCode}, errors.WithStack(err)
 	}
-	if response.StatusCode != 200 {
-		return errors.New("Non 200 status code")
+	if r.StatusCode != 200 {
+		return map[string]interface{}{"code": r.StatusCode}, errors.New("Non 200 status code")
 	}
-	return nil
+	return map[string]interface{}{"code": 200}, nil
 }
 
 type def struct {
