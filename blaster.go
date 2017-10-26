@@ -58,15 +58,11 @@ type LogWriteFlusher interface {
 }
 
 type statsDef struct {
-	itemsStarted  uint64
-	itemsFinished uint64
-	itemsSkipped  uint64
-	itemsSuccess  uint64
-	itemsFailed   uint64
-
 	requestsStarted         uint64
 	requestsFinished        uint64
+	requestsSkipped         uint64
 	requestsSuccess         uint64
+	requestsFailed          uint64
 	requestsSuccessDuration uint64
 	requestsDurationQueue   *FiloQueue
 
@@ -169,7 +165,7 @@ func (b *Blaster) RegisterWorkerType(key string, workerFunc func() Worker) {
 }
 
 type Worker interface {
-	Send(ctx context.Context, payload map[string]interface{}) error
+	Send(ctx context.Context, payload map[string]interface{}) (response map[string]interface{}, err error)
 }
 
 type Starter interface {

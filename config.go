@@ -18,6 +18,7 @@ type configDef struct {
 	Data            string                 `mapstructure:"data" json:"data"`
 	Log             string                 `mapstructure:"log" json:"log"`
 	LogData         []string               `mapstructure:"log-data" json:"log-data"`
+	LogOutput       []string               `mapstructure:"log-output" json:"log-output"`
 	Resume          bool                   `mapstructure:"resume" json:"resume"`
 	Rate            float64                `mapstructure:"rate" json:"rate"`
 	Workers         int                    `mapstructure:"workers" json:"workers"`
@@ -48,8 +49,8 @@ func (b *Blaster) loadConfigViper() error {
 	pflag.Float64("rate", 1.0, "Initial rate in items per second. This may be set with the BLAST_RATE environment variable or the rate config option.")
 	pflag.Int("workers", 5, "Number of workers. This may be set with the BLAST_WORKERS environment variable or the workers config option.")
 	pflag.String("worker-type", "", "The selected worker type. Register new worker types with the `RegisterWorkerType` function. This may be set with the BLAST_WORKER_TYPE environment variable or the worker-type config option.")
-	// TODO: log-data
-	//b.viper.SetDefault("log-data", []string{})
+	pflag.String("log-data", "", "Array of data fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_DATA environment variable or the log-data config option.")
+	pflag.String("log-output", "", "Array of worker response fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_OUTPUT environment variable or the log-output config option.")
 	pflag.String("payload-template", "", "This template is rendered and passed to the worker `Send` method. This may be set as a json encoded map[string]interface{} with the BLAST_PAYLOAD_TEMPLATE environment variable or the payload-template config option.")
 	pflag.String("worker-template", "", "If the selected worker type satisfies the `Starter` or `Stopper` interfaces, the worker template will be rendered and passed to the `Start` or `Stop` methods to initialise each worker. Use with `worker-variants` to configure several workers differently to spread load. This may be set as a json encoded map[string]interface{} with the BLAST_WORKER_TEMPLATE environment variable or the worker-template config option.")
 	pflag.String("payload-variants", "", "An array of maps that will cause each item to be repeated with the provided data. This may be set as a json encoded []map[string]string with the BLAST_PAYLOAD_VARIANTS environment variable or the payload-variants config option.")
@@ -66,6 +67,7 @@ func (b *Blaster) loadConfigViper() error {
 	b.viper.SetDefault("workers", 5)
 	b.viper.SetDefault("worker-type", "")
 	b.viper.SetDefault("log-data", []string{})
+	b.viper.SetDefault("log-output", []string{})
 	b.viper.SetDefault("worker-template", map[string]interface{}{})
 	b.viper.SetDefault("payload-template", map[string]interface{}{})
 	b.viper.SetDefault("payload-variants", []map[string]string{{}})
@@ -101,6 +103,13 @@ func (b *Blaster) loadConfigViper() error {
 	if err := b.viper.UnmarshalKey("log-data", &b.config.LogData); err != nil {
 		if s := b.viper.GetString("log-data"); s != "" {
 			if err := json.Unmarshal([]byte(s), &b.config.LogData); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+	}
+	if err := b.viper.UnmarshalKey("log-output", &b.config.LogOutput); err != nil {
+		if s := b.viper.GetString("log-output"); s != "" {
+			if err := json.Unmarshal([]byte(s), &b.config.LogOutput); err != nil {
 				return errors.WithStack(err)
 			}
 		}

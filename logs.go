@@ -97,7 +97,9 @@ func (b *Blaster) openLogAndInit() error {
 	b.logWriter = csv.NewWriter(logFile)
 	b.logCloser = logFile
 	if s.Size() == 0 {
-		fields := append([]string{"hash", "result"}, b.config.LogData...)
+		fields := []string{"hash", "result"}
+		fields = append(fields, b.config.LogData...)
+		fields = append(fields, b.config.LogOutput...)
 		if err := b.logWriter.Write(fields); err != nil {
 			return errors.WithStack(err)
 		}
