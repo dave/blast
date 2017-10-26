@@ -59,7 +59,6 @@ func TestNew(t *testing.T) {
 
 	must(t, b.start(ctx))
 
-	mustMatch(t, outbuf, 1, `\nSuccess\:\s+0\n`)
 	mustMatch(t, outbuf, 1, `\nSuccess\:\s+3\n`)
 
 	outLog.must(t, 1, []string{"3763b9c0e1b2307c|c1377b027e806557", "true"})
@@ -78,7 +77,6 @@ func TestNew(t *testing.T) {
 	must(t, b1.loadPreviousLogsFromReader(outLog.reader()))
 	must(t, b1.start(ctx))
 
-	mustMatch(t, outbuf1, 1, `\nSuccess\:\s+0\n`)
 	mustMatch(t, outbuf1, 1, `\nSuccess\:\s+1\n`)
 	mustMatch(t, outbuf1, 1, `\nSkipped\:\s+3 \(from previous run\)\n`)
 	outLog.must(t, 4, []string{"73d81ec7b7251e65|fab9096e8c84809f", "true"})
