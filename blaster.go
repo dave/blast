@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/leemcloughlin/gofarmhash"
+	"github.com/spf13/viper"
 )
 
 const DEBUG = false
@@ -18,6 +19,7 @@ const INSTANT_COUNT = 100
 
 type Blaster struct {
 	config          *configDef
+	viper           *viper.Viper
 	rate            float64
 	skip            map[farmhash.Uint128]struct{}
 	dataCloser      io.Closer
@@ -75,6 +77,7 @@ type statsDef struct {
 func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 
 	b := &Blaster{
+		viper:                  viper.New(),
 		cancel:                 cancel,
 		mainWait:               new(sync.WaitGroup),
 		workerWait:             new(sync.WaitGroup),
@@ -110,7 +113,7 @@ func (b *Blaster) Start(ctx context.Context) error {
 
 	b.out = os.Stdout
 
-	if err := b.loadConfig(); err != nil {
+	if err := b.loadConfigViper(); err != nil {
 		return err
 	}
 
