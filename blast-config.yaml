@@ -55,6 +55,7 @@ worker-type: "dummy"
 # -------------------------
 log-data:
   - "user_name"
+  - "action"
 
 # -------------------------
 #        log-output
