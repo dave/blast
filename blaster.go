@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/leemcloughlin/gofarmhash"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -115,6 +116,10 @@ func (b *Blaster) Start(ctx context.Context) error {
 
 	if err := b.loadConfigViper(); err != nil {
 		return err
+	}
+
+	if b.config.Data == "" {
+		return errors.New("No data file specified. Use --config to view current config.")
 	}
 
 	if err := b.openDataFile(ctx); err != nil {

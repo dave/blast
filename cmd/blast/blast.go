@@ -6,10 +6,14 @@ import (
 
 	"fmt"
 
+	"os"
+
 	"github.com/dave/blast"
 	"github.com/dave/blast/dummyworker"
 	"github.com/dave/blast/httpworker"
 )
+
+const DEBUG = false
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -21,6 +25,11 @@ func main() {
 	b.RegisterWorkerType("http", httpworker.New)
 
 	if err := b.Start(ctx); err != nil {
-		log.Fatal(fmt.Printf("%+v", err))
+		if DEBUG {
+			log.Fatal(fmt.Printf("%+v", err))
+		} else {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
