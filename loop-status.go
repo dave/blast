@@ -117,8 +117,6 @@ func (b *Blaster) printStatus(final bool) {
 		} else {
 			w.Write([]byte(fmt.Sprintf("Latency:\t%v ms per request\n", durationTotal)))
 		}
-	} else {
-		w.Write([]byte(fmt.Sprintf("Latency:\tn/a\n")))
 	}
 
 	if !final {

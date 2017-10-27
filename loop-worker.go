@@ -28,7 +28,11 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 			}
 		}
 
-		workerFunc := b.workerTypes[b.config.WorkerType]
+		workerFunc, ok := b.workerTypes[b.config.WorkerType]
+		if !ok {
+			b.errorChannel <- errors.Errorf("Worker type %s not found", b.config.WorkerType)
+			return
+		}
 		w := workerFunc()
 
 		if s, ok := w.(Starter); ok {
