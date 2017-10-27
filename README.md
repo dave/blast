@@ -19,6 +19,43 @@ Usage
 blast [options]
 ```
 
+Status
+======
+
+Blast prints a summary every five seconds. While Blast is running, you can hit enter for an updated 
+summary, or enter a number to change the sending rate. 
+
+Here's an example of the output:
+
+```
+Summary
+=======
+Rate:          20 items/sec (40 requests/sec)
+Started:       313 requests
+Finished:      263 requests
+Success:       183 requests
+Failed:        80 requests
+Latency:       1465 ms per request (last 100: 1482 ms per request)
+Concurrency:   50 / 50 workers in use
+Skipped ticks: 31 (when all workers are busy)
+               
+Responses      
+=========      
+200:           183 requests (last 100: 67 requests)
+404:           63 requests (last 100: 24 requests)
+500:           17 requests (last 100: 9 requests)
+
+Current rate is 20 items / second. Enter a new rate or press enter to view status.
+
+Rate?
+```
+
+If the worker returns a integer named `status` in it's response, this is summarized in the 
+`Responses` section.
+
+Note that if multiple payload variants are configured, each item results in several requests, so 
+the resultant rate in requests per second will be greater than the entered rate (items per second).
+
 Config
 ======
 
