@@ -41,14 +41,13 @@ func (b *Blaster) loadConfigViper() error {
 		}
 	}
 
-	// using standard library "flag" package
 	printConfig := pflag.Bool("config", false, "If true, just prints the cuttentcurrent config and exits.")
-	pflag.String("data", "", "The data file to load. Stream directly from a GCS bucket with 'gs://{bucket}/{filename}.csv'. This may be set with the BLAST_DATA environment variable or the data config option.")
+	pflag.String("data", "", "The data file to load. Stream directly from a GCS bucket with 'gs://{bucket}/{filename}.csv'. Data should be in CSV format with a header row. This may be set with the BLAST_DATA environment variable or the data config option.")
 	pflag.String("log", "", "The log file to create / append to. This may be set with the BLAST_LOG environment variable or the log config option.")
 	pflag.Bool("resume", true, "If true, try to load the log file and skip previously successful items (failed items will be retried). This may be set with the BLAST_RESUME environment variable or the resume config option.")
-	pflag.Float64("rate", 1.0, "Initial rate in items per second. This may be set with the BLAST_RATE environment variable or the rate config option.")
+	pflag.Float64("rate", 1.0, "Initial rate in items per second. Simply enter a new rate during execution to adjust this. This may be set with the BLAST_RATE environment variable or the rate config option.")
 	pflag.Int("workers", 5, "Number of workers. This may be set with the BLAST_WORKERS environment variable or the workers config option.")
-	pflag.String("worker-type", "", "The selected worker type. Register new worker types with the `RegisterWorkerType` function. This may be set with the BLAST_WORKER_TYPE environment variable or the worker-type config option.")
+	pflag.String("worker-type", "", "The selected worker type. Register new worker types with the `RegisterWorkerType` method. This may be set with the BLAST_WORKER_TYPE environment variable or the worker-type config option.")
 	pflag.String("log-data", "", "Array of data fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_DATA environment variable or the log-data config option.")
 	pflag.String("log-output", "", "Array of worker response fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_OUTPUT environment variable or the log-output config option.")
 	pflag.String("payload-template", "", "This template is rendered and passed to the worker `Send` method. This may be set as a json encoded map[string]interface{} with the BLAST_PAYLOAD_TEMPLATE environment variable or the payload-template config option.")
