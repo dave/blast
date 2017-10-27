@@ -3,7 +3,8 @@
 #          data
 # -------------------------
 # The data file to load. Stream directly from a GCS bucket with "gs://{bucket}/{filename}.csv". 
-# This may be set with the BLAST_DATA environment variable or the --data flag. 
+# Data should be in CSV format with a header row. This may be set with the BLAST_DATA environment 
+# variable or the --data flag. 
 # -------------------------
 data: "data.csv"
 
@@ -42,7 +43,7 @@ workers: 4
 # -------------------------
 #       worker-type
 # -------------------------
-# The selected worker type. Register new worker types with the `RegisterWorkerType` function. This 
+# The selected worker type. Register new worker types with the `RegisterWorkerType` method. This 
 # may be set with the BLAST_WORKER_TYPE environment variable or the --worker-type flag.
 # -------------------------
 worker-type: "dummy"
@@ -51,7 +52,7 @@ worker-type: "dummy"
 #         log-data
 # -------------------------
 # Array of data fields to include in the output log. This may be set as a json encoded []string 
-# with the BLAST_LOG_DATA environment variable or the --log-data flag.")
+# with the BLAST_LOG_DATA environment variable or the --log-data flag.
 # -------------------------
 log-data:
   - "user_name"
