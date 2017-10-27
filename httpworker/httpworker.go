@@ -30,12 +30,12 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (response
 	request = request.WithContext(ctx)
 	r, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return map[string]interface{}{"code": r.StatusCode}, errors.WithStack(err)
+		return map[string]interface{}{"status": r.StatusCode}, errors.WithStack(err)
 	}
 	if r.StatusCode != 200 {
-		return map[string]interface{}{"code": r.StatusCode}, errors.New("Non 200 status code")
+		return map[string]interface{}{"status": r.StatusCode}, errors.New("Non 200 status")
 	}
-	return map[string]interface{}{"code": 200}, nil
+	return map[string]interface{}{"status": 200}, nil
 }
 
 type def struct {

@@ -65,6 +65,8 @@ type statsDef struct {
 	requestsFailed          uint64
 	requestsSuccessDuration uint64
 	requestsDurationQueue   *FiloQueue
+	requestsStatusQueue     *FiloQueue
+	requestsStatusTotal     *ThreadSaveMapIntInt
 
 	workersBusy  int64
 	ticksSkipped uint64
@@ -83,6 +85,8 @@ func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 		changeRateChannel:      make(chan float64, 1),
 		stats: statsDef{
 			requestsDurationQueue: &FiloQueue{},
+			requestsStatusQueue:   &FiloQueue{},
+			requestsStatusTotal:   NewThreadSaveMapIntInt(),
 		},
 	}
 
@@ -155,7 +159,7 @@ func (b *Blaster) start(ctx context.Context) error {
 	fmt.Fprintln(b.out, "Waiting for processes to finish...")
 	b.mainWait.Wait()
 
-	b.printStatus()
+	b.printStatus(true)
 
 	return nil
 }
