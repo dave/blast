@@ -64,7 +64,7 @@ log-data:
 # []string with the BLAST_LOG_OUTPUT environment variable or the --log-output flag.
 # -------------------------
 log-output:
-  - "code"
+  - "status"
 
 # -------------------------
 #     payload-template

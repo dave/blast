@@ -114,7 +114,7 @@ func (b *Blaster) send(ctx context.Context, w Worker, workerVariantData map[stri
 	if success {
 		atomic.AddUint64(&b.stats.requestsSuccess, 1)
 		atomic.AddUint64(&b.stats.requestsSuccessDuration, uint64(elapsed))
-		b.stats.requestsDurationQueue.Add(uint64(elapsed))
+		b.stats.requestsDurationQueue.Add(int(elapsed))
 	} else {
 		atomic.AddUint64(&b.stats.requestsFailed, 1)
 	}
@@ -136,6 +136,13 @@ func (b *Blaster) send(ctx context.Context, w Worker, workerVariantData map[stri
 			val = string(j)
 		}
 		extraFields = append(extraFields, val)
+	}
+
+	if status, ok := out["status"]; ok {
+		if statusInt, ok := status.(int); ok {
+			b.stats.requestsStatusTotal.Increment(statusInt)
+			b.stats.requestsStatusQueue.Add(statusInt)
+		}
 	}
 
 	lr := logRecord{

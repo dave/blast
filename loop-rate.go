@@ -45,8 +45,7 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 			case s := <-readString():
 				s = strings.TrimSpace(s)
 				if s == "" {
-					b.printStatus()
-					b.printRatePrompt()
+					b.printStatus(false)
 					continue
 				}
 				f, err := strconv.ParseFloat(s, 64)
