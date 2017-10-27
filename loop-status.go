@@ -32,8 +32,6 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 }
 
 func (b *Blaster) printStatus(final bool) {
-	success := atomic.LoadUint64(&b.stats.requestsSuccess)
-
 	type def struct {
 		status  int
 		total   uint64
@@ -98,8 +96,12 @@ func (b *Blaster) printStatus(final bool) {
 		}
 	}
 	w.Write([]byte(fmt.Sprintf("Started:\t%d requests\n", atomic.LoadUint64(&b.stats.requestsStarted))))
-	w.Write([]byte(fmt.Sprintf("Finished:\t%d requests\n", atomic.LoadUint64(&b.stats.requestsFinished))))
-	w.Write([]byte(fmt.Sprintf("Success:\t%d requests\n", atomic.LoadUint64(&b.stats.requestsSuccess))))
+
+	finished := atomic.LoadUint64(&b.stats.requestsFinished)
+	w.Write([]byte(fmt.Sprintf("Finished:\t%d requests\n", finished)))
+
+	success := atomic.LoadUint64(&b.stats.requestsSuccess)
+	w.Write([]byte(fmt.Sprintf("Success:\t%d requests\n", success)))
 	w.Write([]byte(fmt.Sprintf("Failed:\t%d requests\n", atomic.LoadUint64(&b.stats.requestsFailed))))
 
 	requestsSkipped := atomic.LoadUint64(&b.stats.requestsSkipped)
@@ -131,7 +133,11 @@ func (b *Blaster) printStatus(final bool) {
 		w.Write([]byte("Responses\t\n"))
 		w.Write([]byte("=========\t\n"))
 		for _, v := range ordered {
-			w.Write([]byte(fmt.Sprintf("%d:\t%d requests (last %d: %d requests)\n", v.status, v.total, INSTANT_COUNT, v.instant)))
+			if finished > INSTANT_COUNT {
+				w.Write([]byte(fmt.Sprintf("%d:\t%d requests (last %d: %d requests)\n", v.status, v.total, INSTANT_COUNT, v.instant)))
+			} else {
+				w.Write([]byte(fmt.Sprintf("%d:\t%d requests\n", v.status, v.total)))
+			}
 		}
 		w.Write([]byte("\n"))
 	}
