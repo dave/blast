@@ -13,8 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (b *Blaster) openDataFile(ctx context.Context) error {
-	var err error
+func (b *Blaster) openDataFile(ctx context.Context) (headers []string, err error) {
 	var rc io.ReadCloser
 	if strings.HasPrefix(b.config.Data, "gs://") {
 		name := strings.TrimPrefix(b.config.Data, "gs://")
@@ -22,25 +21,27 @@ func (b *Blaster) openDataFile(ctx context.Context) error {
 		handle := name[strings.Index(name, "/")+1:]
 		client, err := storage.NewClient(ctx)
 		if err != nil {
-			return errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 		rc, err = client.Bucket(bucket).Object(handle).NewReader(ctx)
 		if err != nil {
-			return errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 	} else {
 		rc, err = os.Open(b.config.Data)
 		if err != nil {
-			return errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 	}
 	b.dataCloser = rc
 	b.dataReader = csv.NewReader(rc)
-	b.dataHeaders, err = b.dataReader.Read()
+
+	headers, err = b.dataReader.Read()
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return nil
+
+	return headers, nil
 }
 
 func (b *Blaster) closeDataFile() {

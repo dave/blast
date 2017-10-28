@@ -23,20 +23,23 @@ func defaultOptions(
 	workerType string,
 	logWriter LogWriteFlusher,
 	workerLog *LoggingWorkerLog,
-) (*Blaster, *bytes.Buffer) {
+) (*Blaster, *ThreadSafeBuffer) {
 	b := New(ctx, cancel)
 	b.RegisterWorkerType("success", workerLog.NewSuccess)
 	b.RegisterWorkerType("fail", workerLog.NewFail)
 	b.RegisterWorkerType("hang", workerLog.NewHang)
 	b.config = &configDef{}
+	b.config.Resume = true
 	b.config.Workers = 1
 	b.config.WorkerType = workerType
 	b.config.PayloadVariants = []map[string]string{{}}
 	b.rate = 100
+	b.softTimeout = time.Millisecond * 1000
+	b.hardTimeout = time.Millisecond * 1500
 	b.dataHeaders = []string{"head"}
 	b.dataReader = csv.NewReader(strings.NewReader(in))
 	b.logWriter = logWriter
-	outbuf := new(bytes.Buffer)
+	outbuf := new(ThreadSafeBuffer)
 	b.out = outbuf
 	b.rateInputReader = strings.NewReader("")
 	return b, outbuf
@@ -170,7 +173,7 @@ func must(t *testing.T, err error) {
 	}
 }
 
-func mustMatch(t *testing.T, buf *bytes.Buffer, num int, pattern string) {
+func mustMatch(t *testing.T, buf *ThreadSafeBuffer, num int, pattern string) {
 	t.Helper()
 	matches := regexp.MustCompile(pattern).FindAllString(buf.String(), -1)
 	if len(matches) != num {
@@ -302,3 +305,24 @@ func (l *LoggingWorker) Send(ctx context.Context, in map[string]interface{}) (ma
 type DummyCloser struct{}
 
 func (DummyCloser) Close() error { return nil }
+
+type ThreadSafeBuffer struct {
+	b bytes.Buffer
+	m sync.Mutex
+}
+
+func (b *ThreadSafeBuffer) Read(p []byte) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Read(p)
+}
+func (b *ThreadSafeBuffer) Write(p []byte) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Write(p)
+}
+func (b *ThreadSafeBuffer) String() string {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.String()
+}

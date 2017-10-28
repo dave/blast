@@ -3,16 +3,16 @@ package blast
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 )
 
 func (b *Blaster) startErrorLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
-	b.errorChannel = make(chan error)
 
 	go func() {
-		defer fmt.Fprintln(b.out, "Exiting error loop")
 		defer b.mainWait.Done()
+		defer fmt.Fprintln(b.out, "Exiting error loop")
 		for {
 			select {
 			// don't react to ctx.Done() here because we may need to wait until workers have finished
@@ -20,10 +20,20 @@ func (b *Blaster) startErrorLoop(ctx context.Context) {
 				// exit gracefully
 				return
 			case err := <-b.errorChannel:
-				fmt.Fprintf(b.out, "%+v\n", err)
+				fmt.Fprintln(b.out, "Exiting with fatal error...")
+				b.err = err
 				b.cancel()
 				return
 			}
 		}
 	}()
+}
+
+func (b *Blaster) error(err error) {
+	select {
+	case b.errorChannel <- err:
+	default:
+		// don't send to error channel if errorChannel isn't listening
+		atomic.AddUint64(&b.stats.errorsIgnored, 1)
+	}
 }

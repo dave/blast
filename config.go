@@ -9,6 +9,8 @@ import (
 
 	"os"
 
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -20,8 +22,10 @@ type configDef struct {
 	LogData         []string               `mapstructure:"log-data" json:"log-data"`
 	LogOutput       []string               `mapstructure:"log-output" json:"log-output"`
 	Resume          bool                   `mapstructure:"resume" json:"resume"`
+	Repeat          bool                   `mapstructure:"repeat" json:"repeat"`
 	Rate            float64                `mapstructure:"rate" json:"rate"`
 	Workers         int                    `mapstructure:"workers" json:"workers"`
+	Timeout         int                    `mapstructure:"timeout" json:"timeout"`
 	WorkerType      string                 `mapstructure:"worker-type" json:"worker-type"`
 	WorkerTemplate  map[string]interface{} `mapstructure:"worker-template" json:"worker-template"`
 	PayloadTemplate map[string]interface{} `mapstructure:"payload-template" json:"payload-template"`
@@ -45,8 +49,10 @@ func (b *Blaster) loadConfigViper() error {
 	pflag.String("data", "", "The data file to load. Stream directly from a GCS bucket with 'gs://{bucket}/{filename}.csv'. Data should be in CSV format with a header row. This may be set with the BLAST_DATA environment variable or the data config option.")
 	pflag.String("log", "", "The log file to create / append to. This may be set with the BLAST_LOG environment variable or the log config option.")
 	pflag.Bool("resume", true, "If true, try to load the log file and skip previously successful items (failed items will be retried). This may be set with the BLAST_RESUME environment variable or the resume config option.")
+	pflag.Bool("repeat", false, "When the end of the data file is found, repeats from the start. Useful for load testing. This may be set with the BLAST_REPEAT environment variable or the repeat config option.")
 	pflag.Float64("rate", 1.0, "Initial rate in items per second. Simply enter a new rate during execution to adjust this. This may be set with the BLAST_RATE environment variable or the rate config option.")
 	pflag.Int("workers", 5, "Number of workers. This may be set with the BLAST_WORKERS environment variable or the workers config option.")
+	pflag.Int("timeout", 1000, "The context passed to the worker has this timeout (in ms). The default value is 1000ms. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 500ms. This may be set with the BLAST_TIMEOUT environment variable or the timeout config option.")
 	pflag.String("worker-type", "", "The selected worker type. Register new worker types with the `RegisterWorkerType` method. This may be set with the BLAST_WORKER_TYPE environment variable or the worker-type config option.")
 	pflag.String("log-data", "", "Array of data fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_DATA environment variable or the log-data config option.")
 	pflag.String("log-output", "", "Array of worker response fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_OUTPUT environment variable or the log-output config option.")
@@ -62,8 +68,10 @@ func (b *Blaster) loadConfigViper() error {
 	b.viper.SetDefault("data", "")
 	b.viper.SetDefault("log", "")
 	b.viper.SetDefault("resume", true)
+	b.viper.SetDefault("repeat", false)
 	b.viper.SetDefault("rate", 1.0)
 	b.viper.SetDefault("workers", 5)
+	b.viper.SetDefault("timeout", 1000)
 	b.viper.SetDefault("worker-type", "")
 	b.viper.SetDefault("log-data", []string{})
 	b.viper.SetDefault("log-output", []string{})
@@ -90,10 +98,16 @@ func (b *Blaster) loadConfigViper() error {
 	if err := b.viper.UnmarshalKey("resume", &b.config.Resume); err != nil {
 		return errors.WithStack(err)
 	}
+	if err := b.viper.UnmarshalKey("repeat", &b.config.Repeat); err != nil {
+		return errors.WithStack(err)
+	}
 	if err := b.viper.UnmarshalKey("rate", &b.config.Rate); err != nil {
 		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("workers", &b.config.Workers); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := b.viper.UnmarshalKey("timeout", &b.config.Timeout); err != nil {
 		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("worker-type", &b.config.WorkerType); err != nil {
@@ -150,6 +164,9 @@ func (b *Blaster) loadConfigViper() error {
 
 	// Set the current rate to the config rate.
 	b.rate = b.config.Rate
+
+	b.softTimeout = time.Duration(b.config.Timeout) * time.Millisecond
+	b.hardTimeout = time.Duration(b.config.Timeout+500) * time.Millisecond
 
 	return nil
 }

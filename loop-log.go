@@ -8,11 +8,10 @@ import (
 func (b *Blaster) startLogLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
-	b.logChannel = make(chan logRecord)
 
 	go func() {
-		defer fmt.Fprintln(b.out, "Exiting log loop")
 		defer b.mainWait.Done()
+		defer fmt.Fprintln(b.out, "Exiting log loop")
 		var count uint64
 		for {
 			count++

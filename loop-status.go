@@ -3,6 +3,7 @@ package blast
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -16,12 +17,14 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 10)
 
 	go func() {
-		defer fmt.Fprintln(b.out, "Exiting status loop")
 		defer b.mainWait.Done()
+		defer fmt.Fprintln(b.out, "Exiting status loop")
 		for {
 			select {
-			// don't react to ctx.Done() here because we may need to wait until workers have finished
-			case <-b.workersFinishedChannel:
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-b.dataFinishedChannel:
 				ticker.Stop()
 				return
 			case <-ticker.C:
@@ -33,15 +36,15 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 
 func (b *Blaster) printStatus(final bool) {
 	type def struct {
-		status  int
+		status  string
 		total   uint64
 		instant uint64
 	}
 	statusQueue := b.stats.requestsStatusQueue.All()
 	statusTotals := b.stats.requestsStatusTotal.All()
-	summary := map[int]def{}
+	summary := map[string]def{}
 	for _, status := range statusQueue {
-		if status == 0 {
+		if status == "" {
 			continue
 		}
 		if _, found := summary[status]; !found {
@@ -59,7 +62,7 @@ func (b *Blaster) printStatus(final bool) {
 		}
 	}
 	for status, total := range statusTotals {
-		if status == 0 {
+		if status == "" {
 			continue
 		}
 		if _, found := summary[status]; !found {
@@ -126,15 +129,20 @@ func (b *Blaster) printStatus(final bool) {
 	if skippedTicks > 0 {
 		w.Write([]byte(fmt.Sprintf("Skipped ticks:\t%d (when all workers are busy)\n", skippedTicks)))
 	}
+
+	if DEBUG {
+		w.Write([]byte(fmt.Sprintf("Goroutines:\t%d\n", runtime.NumGoroutine())))
+	}
+
 	w.Write([]byte("\t\n"))
 	if len(ordered) > 0 {
 		w.Write([]byte("Responses\t\n"))
 		w.Write([]byte("=========\t\n"))
 		for _, v := range ordered {
 			if finished > INSTANT_COUNT {
-				w.Write([]byte(fmt.Sprintf("%d:\t%d requests (last %d: %d requests)\n", v.status, v.total, INSTANT_COUNT, v.instant)))
+				w.Write([]byte(fmt.Sprintf("%s:\t%d requests (last %d: %d requests)\n", v.status, v.total, INSTANT_COUNT, v.instant)))
 			} else {
-				w.Write([]byte(fmt.Sprintf("%d:\t%d requests\n", v.status, v.total)))
+				w.Write([]byte(fmt.Sprintf("%s:\t%d requests\n", v.status, v.total)))
 			}
 		}
 		w.Write([]byte("\n"))
@@ -156,40 +164,40 @@ Rate?
 	)
 }
 
-func NewThreadSaveMapIntInt() *ThreadSaveMapIntInt {
-	return &ThreadSaveMapIntInt{
-		data: map[int]uint64{},
+func NewThreadSaveMapStringInt() *ThreadSaveMapStringInt {
+	return &ThreadSaveMapStringInt{
+		data: map[string]uint64{},
 	}
 }
 
-type ThreadSaveMapIntInt struct {
-	data map[int]uint64
+type ThreadSaveMapStringInt struct {
+	data map[string]uint64
 	m    sync.Mutex
 }
 
-func (t *ThreadSaveMapIntInt) Increment(key int) {
+func (t *ThreadSaveMapStringInt) Increment(key string) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	t.data[key] = t.data[key] + 1
 }
 
-func (t *ThreadSaveMapIntInt) All() map[int]uint64 {
+func (t *ThreadSaveMapStringInt) All() map[string]uint64 {
 	t.m.Lock()
 	defer t.m.Unlock()
-	out := map[int]uint64{}
+	out := map[string]uint64{}
 	for k, v := range t.data {
 		out[k] = v
 	}
 	return out
 }
 
-type FiloQueue struct {
+type FiloQueueInt struct {
 	data   [INSTANT_COUNT]int
 	m      sync.Mutex
 	cursor int
 }
 
-func (f *FiloQueue) Add(v int) {
+func (f *FiloQueueInt) Add(v int) {
 	f.m.Lock()
 	defer f.m.Unlock()
 	f.data[f.cursor] = v
@@ -199,7 +207,7 @@ func (f *FiloQueue) Add(v int) {
 	}
 }
 
-func (f *FiloQueue) Sum() int {
+func (f *FiloQueueInt) Sum() int {
 	f.m.Lock()
 	defer f.m.Unlock()
 	var sum int
@@ -209,10 +217,26 @@ func (f *FiloQueue) Sum() int {
 	return sum
 }
 
-func (f *FiloQueue) All() [INSTANT_COUNT]int {
+type FiloQueueString struct {
+	data   [INSTANT_COUNT]string
+	m      sync.Mutex
+	cursor int
+}
+
+func (f *FiloQueueString) Add(v string) {
 	f.m.Lock()
 	defer f.m.Unlock()
-	var out [INSTANT_COUNT]int
+	f.data[f.cursor] = v
+	f.cursor++
+	if f.cursor >= INSTANT_COUNT {
+		f.cursor = 0
+	}
+}
+
+func (f *FiloQueueString) All() [INSTANT_COUNT]string {
+	f.m.Lock()
+	defer f.m.Unlock()
+	var out [INSTANT_COUNT]string
 	for i, v := range f.data {
 		out[i] = v
 	}

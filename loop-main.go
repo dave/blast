@@ -11,11 +11,10 @@ import (
 func (b *Blaster) startMainLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
-	b.mainChannel = make(chan struct{})
 
 	go func() {
-		defer fmt.Fprintln(b.out, "Exiting main loop")
 		defer b.mainWait.Done()
+		defer fmt.Fprintln(b.out, "Exiting main loop")
 		for {
 			select {
 			case <-ctx.Done():
@@ -25,12 +24,21 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 					record, err := b.dataReader.Read()
 					if err != nil {
 						if err == io.EOF {
-							fmt.Fprintln(b.out, "Found end of data file")
-							// finish gracefully
-							close(b.dataFinishedChannel)
-							return
+							if b.config.Repeat {
+								b.closeDataFile()
+								if _, err := b.openDataFile(ctx); err != nil {
+									b.error(errors.WithStack(err))
+									return
+								}
+								continue
+							} else {
+								fmt.Fprintln(b.out, "Found end of data file")
+								// finish gracefully
+								close(b.dataFinishedChannel)
+								return
+							}
 						}
-						b.errorChannel <- errors.WithStack(err)
+						b.error(errors.WithStack(err))
 						return
 					}
 					b.workerChannel <- workDef{Record: record}
