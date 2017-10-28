@@ -6,9 +6,11 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"runtime"
 	"sync"
+
 	"time"
+
+	"sync/atomic"
 
 	"github.com/leemcloughlin/gofarmhash"
 	"github.com/pkg/errors"
@@ -22,6 +24,8 @@ type Blaster struct {
 	config          *configDef
 	viper           *viper.Viper
 	rate            float64
+	softTimeout     time.Duration
+	hardTimeout     time.Duration
 	skip            map[farmhash.Uint128]struct{}
 	dataCloser      io.Closer
 	dataReader      DataReader
@@ -47,6 +51,7 @@ type Blaster struct {
 	workerTypes map[string]func() Worker
 
 	stats statsDef
+	err   error
 }
 
 type DataReader interface {
@@ -65,12 +70,13 @@ type statsDef struct {
 	requestsSuccess         uint64
 	requestsFailed          uint64
 	requestsSuccessDuration uint64
-	requestsDurationQueue   *FiloQueue
-	requestsStatusQueue     *FiloQueue
-	requestsStatusTotal     *ThreadSaveMapIntInt
+	requestsDurationQueue   *FiloQueueInt
+	requestsStatusQueue     *FiloQueueString
+	requestsStatusTotal     *ThreadSaveMapStringInt
 
-	workersBusy  int64
-	ticksSkipped uint64
+	workersBusy   int64
+	ticksSkipped  uint64
+	errorsIgnored uint64
 }
 
 func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
@@ -81,13 +87,18 @@ func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 		mainWait:               new(sync.WaitGroup),
 		workerWait:             new(sync.WaitGroup),
 		workerTypes:            make(map[string]func() Worker),
+		skip:                   make(map[farmhash.Uint128]struct{}),
 		dataFinishedChannel:    make(chan struct{}),
 		workersFinishedChannel: make(chan struct{}),
 		changeRateChannel:      make(chan float64, 1),
+		errorChannel:           make(chan error),
+		logChannel:             make(chan logRecord),
+		mainChannel:            make(chan struct{}),
+		workerChannel:          make(chan workDef),
 		stats: statsDef{
-			requestsDurationQueue: &FiloQueue{},
-			requestsStatusQueue:   &FiloQueue{},
-			requestsStatusTotal:   NewThreadSaveMapIntInt(),
+			requestsDurationQueue: &FiloQueueInt{},
+			requestsStatusQueue:   &FiloQueueString{},
+			requestsStatusTotal:   NewThreadSaveMapStringInt(),
 		},
 	}
 
@@ -112,7 +123,8 @@ func (b *Blaster) Exit() {
 
 func (b *Blaster) Start(ctx context.Context) error {
 
-	b.out = os.Stdout
+	// os.Stdout isn't guaranteed to be safe for concurrent access
+	b.out = NewThreadSafeWriter(os.Stdout)
 
 	if err := b.loadConfigViper(); err != nil {
 		return err
@@ -122,9 +134,11 @@ func (b *Blaster) Start(ctx context.Context) error {
 		return errors.New("No data file specified. Use --config to view current config.")
 	}
 
-	if err := b.openDataFile(ctx); err != nil {
+	headers, err := b.openDataFile(ctx)
+	if err != nil {
 		return err
 	}
+	b.dataHeaders = headers
 	defer b.closeDataFile()
 
 	if err := b.openLogAndInit(); err != nil {
@@ -157,14 +171,25 @@ func (b *Blaster) start(ctx context.Context) error {
 
 	fmt.Fprintln(b.out, "Waiting for workers to finish...")
 	b.workerWait.Wait()
+	fmt.Fprintln(b.out, "All workers finished.")
 
 	// signal to log and error loop that it's tine to exit
 	close(b.workersFinishedChannel)
 
 	fmt.Fprintln(b.out, "Waiting for processes to finish...")
 	b.mainWait.Wait()
+	fmt.Fprintln(b.out, "All processes finished.")
 
-	b.printStatus(true)
+	if b.err != nil {
+		fmt.Fprintln(b.out, "")
+		errorsIgnored := atomic.LoadUint64(&b.stats.errorsIgnored)
+		if errorsIgnored > 0 {
+			fmt.Fprintf(b.out, "%d errors were ignored because we were already exiting with an error.\n", errorsIgnored)
+		}
+		fmt.Fprintf(b.out, "Fatal error: %v\n", b.err)
+	} else {
+		b.printStatus(true)
+	}
 
 	return nil
 }
@@ -185,14 +210,19 @@ type Stopper interface {
 	Stop(ctx context.Context, payload map[string]interface{}) error
 }
 
-func init() {
-	if DEBUG {
-		go func() {
-			// debug to see if goroutines aren't being closed...
-			ticker := time.NewTicker(time.Millisecond * 200)
-			for range ticker.C {
-				fmt.Println("runtime.NumGoroutine(): ", runtime.NumGoroutine())
-			}
-		}()
+func NewThreadSafeWriter(w io.Writer) *ThreadSafeWriter {
+	return &ThreadSafeWriter{
+		w: w,
 	}
+}
+
+type ThreadSafeWriter struct {
+	w io.Writer
+	m sync.Mutex
+}
+
+func (t *ThreadSafeWriter) Write(p []byte) (n int, err error) {
+	t.m.Lock()
+	defer t.m.Unlock()
+	return t.w.Write(p)
 }

@@ -47,10 +47,14 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Dummy worker - wait a random time
-	duration := 1000 + int(r.Float64()*1000.0)
+	duration := 250 + int(r.Float64()*1000.0)
 	select {
 	case <-time.After(time.Millisecond * time.Duration(duration)):
 	case <-ctx.Done():
+		if ctx.Err() != nil {
+			return map[string]interface{}{"status": ctx.Err().Error()}, ctx.Err()
+		}
+		return map[string]interface{}{"status": "context done"}, errors.New("context done")
 	}
 
 	// Dummy worker - return an error sometimes

@@ -13,8 +13,8 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Second / time.Duration(b.rate))
 
 	go func() {
-		defer fmt.Fprintln(b.out, "Exiting ticker loop")
 		defer b.mainWait.Done()
+		defer fmt.Fprintln(b.out, "Exiting ticker loop")
 		for {
 			<-ticker.C
 			select {

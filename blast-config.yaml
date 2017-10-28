@@ -25,6 +25,14 @@ log: "out.log"
 resume: false
 
 # -------------------------
+#          repeat
+# -------------------------
+# When the end of the data file is found, repeats from the start. Useful for load testing. This may 
+# be set with the BLAST_REPEAT environment variable or the --repeat flag. 
+# -------------------------
+repeat: false
+
+# -------------------------
 #           rate
 # -------------------------
 # Initial rate in items per second. This may be set with the BLAST_RATE environment variable or the 
@@ -39,6 +47,16 @@ rate: 5
 # flag.
 # -------------------------
 workers: 4
+
+# -------------------------
+#          timeout
+# -------------------------
+# The context passed to the worker has this timeout (in ms). The default value is 1000ms. Workers 
+# must respect this the context cancellation. We exit with an error if any worker is processing for 
+# timeout + 500ms. This may be set with the BLAST_TIMEOUT environment variable or the --timeout 
+# flag.
+# -------------------------
+timeout: 1000
 
 # -------------------------
 #       worker-type

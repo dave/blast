@@ -65,10 +65,7 @@ func (b *Blaster) loadPreviousLogsFromReader(r io.Reader) error {
 			return err
 		}
 		if lr.Result {
-			if b.skip == nil {
-				b.skip = make(map[farmhash.Uint128]struct{})
-			}
-			b.skip[lr.PayloadHash] = struct{}{}
+			b.skip[lr.Hash] = struct{}{}
 		}
 	}
 	return nil
@@ -116,28 +113,28 @@ func (b *Blaster) flushAndCloseLog() {
 }
 
 type logRecord struct {
-	PayloadHash farmhash.Uint128
-	Result      bool
-	ExtraFields []string
+	Hash   farmhash.Uint128
+	Result bool
+	Fields []string
 }
 
 func (l logRecord) ToCsv() []string {
 	out := []string{
-		fmt.Sprintf("%x|%x", l.PayloadHash.First, l.PayloadHash.Second),
+		fmt.Sprintf("%x|%x", l.Hash.First, l.Hash.Second),
 		fmt.Sprint(l.Result),
 	}
-	return append(out, l.ExtraFields...)
+	return append(out, l.Fields...)
 }
 
 func (l *logRecord) FromCsv(in []string) error {
 	var err error
 	s := in[0]
 	pos := strings.Index(s, "|")
-	l.PayloadHash.First, err = strconv.ParseUint(s[:pos], 16, 64)
+	l.Hash.First, err = strconv.ParseUint(s[:pos], 16, 64)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	l.PayloadHash.Second, err = strconv.ParseUint(s[pos+1:], 16, 64)
+	l.Hash.Second, err = strconv.ParseUint(s[pos+1:], 16, 64)
 	if err != nil {
 		return errors.WithStack(err)
 	}

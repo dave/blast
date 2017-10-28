@@ -50,7 +50,7 @@ Current rate is 20 items / second. Enter a new rate or press enter to view statu
 Rate?
 ```
 
-If the worker returns a integer named `status` in it's response, this is summarized in the 
+If the worker returns a field named `status` in it's response, this is summarized in the 
 `Responses` section.
 
 Note that if multiple payload variants are configured, each item results in several requests, so 
@@ -124,6 +124,18 @@ This template is rendered and passed to the worker `Send` method. This may be se
 
 Optional configuration options
 ==============================
+
+repeat
+------
+When the end of the data file is found, repeats from the start. Useful for load testing. This may 
+be set with the `BLAST_REPEAT` environment variable or the `--repeat` flag.
+
+timeout
+-------
+The context passed to the worker has this timeout (in ms). The default value is 1000ms. Workers 
+must respect this the context cancellation. We exit with an error if any worker is processing for 
+timeout + 500ms. This may be set with the `BLAST_TIMEOUT` environment variable or the `--timeout` 
+flag. 
 
 log-data
 --------
