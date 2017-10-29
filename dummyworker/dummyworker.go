@@ -59,9 +59,9 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 
 	// Dummy worker - return an error sometimes
 	errorrand := r.Float64()
-	if errorrand > 0.95 {
+	if errorrand > 0.99 {
 		return map[string]interface{}{"status": 500}, errors.New("Error 500")
-	} else if errorrand > 0.7 {
+	} else if errorrand > 0.96 {
 		return map[string]interface{}{"status": 404}, errors.New("Error 404")
 	} else {
 		return map[string]interface{}{"status": 200}, nil

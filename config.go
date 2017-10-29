@@ -168,5 +168,9 @@ func (b *Blaster) loadConfigViper() error {
 	b.softTimeout = time.Duration(b.config.Timeout) * time.Millisecond
 	b.hardTimeout = time.Duration(b.config.Timeout+500) * time.Millisecond
 
+	if b.config.Resume && b.config.Repeat {
+		panic("Can't use repeat and resume at the same time!")
+	}
+
 	return nil
 }
