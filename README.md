@@ -1,11 +1,11 @@
 Blast
 =====
 
-* Blast makes API requests at a fixed rate, based on input data from a CSV file.   
-* Upon restarting, successful items from previous runs are skipped.   
+* Blast makes API requests at a fixed rate, based on input data from a CSV file.      
 * The number of concurrent workers is configurable.  
 * The rate may be changed interactively during execution.  
 * Blast is protocol agnostic, and adding a new worker type is trivial.  
+* With the `resume` option, successful items from previous runs are skipped.  
 
 Installation
 ============
@@ -32,39 +32,39 @@ Here's an example of the output:
 ```
 Metrics
 =======
-Concurrency:      1837 / 2000 workers in use
-                                                                                             
-Desired rate:     (all)        5000         1000         400         200         100                       
-Actual rate:      1122         4839         986          399         200         100                       
-Avg concurrency:  1439         1790         365          149         74          36                        
-Duration:         01:20        00:13        00:12        00:23       00:12       00:18                     
-                                                                                             
-Total                                                                                        
------                                                                                        
-Started:          89758        63592        12568        9234        2532        1832        
-Finished:         87921        61755        12568        9234        2532        1832        
-Mean:             374.6 ms     371.7 ms     377.6 ms     374.2 ms    376.3 ms    376.4 ms                  
-95th:             486.2 ms     487.1 ms     486.2 ms     489.6 ms    486.4 ms    488.2 ms                  
-                                                                                             
-200                                                                                          
----                                                                                          
-Count:            84404 (96%)  59321 (96%)  12025 (96%)  8854 (96%)  2441 (96%)  1763 (96%)  
-Mean:             372.9 ms     371.6 ms     373.9 ms     373.7 ms    374.1 ms    375.9 ms                  
-95th:             487.1 ms     485.1 ms     490.2 ms     489.4 ms    485.9 ms    487.8 ms                  
-                                                                                             
-404                                                                                          
----                                                                                          
-Count:            2633 (3%)    1815 (3%)    397 (3%)     292 (3%)    70 (3%)     59 (3%)     
-Mean:             373.0 ms     372.9 ms     371.5 ms     367.0 ms    365.3 ms    377.4 ms                  
-95th:             487.1 ms     488.1 ms     481.7 ms     483.9 ms    474.2 ms    481.7 ms                  
-                                                                                             
-500                                                                                          
----                                                                                          
-Count:            887 (1%)     622 (1%)     146 (1%)     88 (1%)     21 (1%)     10 (1%)     
-Mean:             375.4 ms     374.9 ms     380.1 ms     363.8 ms    400.9 ms    386.3 ms                  
-95th:             487.1 ms     487.1 ms     483.4 ms     489.3 ms    497.2 ms    483.9 ms                  
+Concurrency:      1999 / 2000 workers in use
+                                                                     
+Desired rate:     (all)        10000        1000         100                   
+Actual rate:      2112         5354         989          100                   
+Avg concurrency:  1733         1976         367          37                    
+Duration:         00:40        00:12        00:14        00:12                 
+                                                                     
+Total                                                                
+-----                                                                
+Started:          84525        69004        14249        1272        
+Finished:         82525        67004        14249        1272        
+Mean:             376.0 ms     374.8 ms     379.3 ms     377.9 ms              
+95th:             491.1 ms     488.1 ms     488.2 ms     489.6 ms              
+                                                                     
+200                                                                  
+---                                                                  
+Count:            79208 (96%)  64320 (96%)  13663 (96%)  1225 (96%)  
+Mean:             376.2 ms     381.9 ms     374.7 ms     378.1 ms              
+95th:             487.6 ms     489.0 ms     487.2 ms     490.5 ms              
+                                                                     
+404                                                                  
+---                                                                  
+Count:            2467 (3%)    2002 (3%)    430 (3%)     35 (3%)     
+Mean:             371.4 ms     371.0 ms     377.2 ms     358.9 ms              
+95th:             487.1 ms     487.1 ms     486.0 ms     480.4 ms              
+                                                                     
+500                                                                  
+---                                                                  
+Count:            853 (1%)     685 (1%)     156 (1%)     12 (1%)     
+Mean:             371.2 ms     370.4 ms     374.5 ms     374.3 ms              
+95th:             487.6 ms     487.1 ms     488.2 ms     466.3 ms              
 
-Current rate is 5000 requests / second. Enter a new rate or press enter to view status.
+Current rate is 10000 requests / second. Enter a new rate or press enter to view status.
 
 Rate?
 ```
@@ -72,12 +72,11 @@ Rate?
 Config
 ======
 
-Blast is configured by config file, command line flags or environment variables.
-
-The `--config` flag specifies the config file to load, and can be `json`, `yaml`, `toml` or 
-anything else that [viper](https://github.com/spf13/viper) can read. If the config flag is omitted, 
-blast searches for `blast-config.json|yaml|toml` in current directory, `$HOME/.config/blast/` and 
-`/etc/blast/`. Environment variables and command line flags override config file options.
+Blast is configured by config file, command line flags or environment variables. The `--config` 
+flag specifies the config file to load, and can be `json`, `yaml`, `toml` or anything else that 
+[viper](https://github.com/spf13/viper) can read. If the config flag is omitted, blast searches for 
+`blast-config.json|yaml|toml|etc` in the current directory, `~/.config/blast/` and `/etc/blast/`. 
+Environment variables and command line flags override config file options.
 
 See [blast-config.yaml](https://github.com/dave/blast/blob/master/blast-config.yaml) for a simple 
 annotated example. See [test-config-load-test.yaml](https://github.com/dave/blast/blob/master/test-config-load-test.yaml)
@@ -183,6 +182,7 @@ the `--worker-variants` flag.
 
 To do
 =====  
+- [ ] Improve templating syntax and add functions for random data
 - [ ] GCS worker with automatic authentication
 - [ ] Adjust rate automatically in response to latency? PID controller?  
 - [ ] Only use part of file: part i of j parts  
