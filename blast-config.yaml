@@ -106,7 +106,10 @@ payload-template:
 # --worker-template flag.
 # -------------------------
 worker-template:
-  base: "https://{{region}}.my-api.com"  
+  print: true
+  base: "https://{{region}}.my-api.com"
+  min: 250
+  max: 500
 
 # -------------------------
 #     payload-variants

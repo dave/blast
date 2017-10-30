@@ -35,17 +35,8 @@ type configDef struct {
 
 func (b *Blaster) loadConfigViper() error {
 
-	b.viper.SetConfigName("blast-config") // name of config file (without extension)
-	b.viper.AddConfigPath("/etc/blast/")
-	b.viper.AddConfigPath("$HOME/.config/blast/")
-	b.viper.AddConfigPath(".")
-	if err := b.viper.ReadInConfig(); err != nil {
-		if _, isNotFound := err.(viper.ConfigFileNotFoundError); !isNotFound {
-			return errors.WithStack(err)
-		}
-	}
-
-	printConfig := pflag.Bool("config", false, "If true, just prints the cuttentcurrent config and exits.")
+	dryRun := pflag.Bool("dry", false, "If true, just prints the current config and exits.")
+	configFlag := pflag.String("config", "", "The config file to load. This may be set with the BLAST_CONFIG environment variable.")
 	pflag.String("data", "", "The data file to load. Stream directly from a GCS bucket with 'gs://{bucket}/{filename}.csv'. Data should be in CSV format with a header row. This may be set with the BLAST_DATA environment variable or the data config option.")
 	pflag.String("log", "", "The log file to create / append to. This may be set with the BLAST_LOG environment variable or the log config option.")
 	pflag.Bool("resume", true, "If true, try to load the log file and skip previously successful items (failed items will be retried). This may be set with the BLAST_RESUME environment variable or the resume config option.")
@@ -62,10 +53,26 @@ func (b *Blaster) loadConfigViper() error {
 	pflag.String("worker-variants", "", "An array of maps that will cause each worker to be initialised with different data. This may be set as a json encoded []map[string]string with the BLAST_WORKER_VARIANTS environment variable or the -worker-variants config option.")
 
 	pflag.Parse()
+
+	if configFlag != nil && *configFlag != "" {
+		b.viper.SetConfigFile(*configFlag)
+	} else {
+		b.viper.SetConfigName("blast-config") // name of config file (without extension)
+		b.viper.AddConfigPath("/etc/blast/")
+		b.viper.AddConfigPath("$HOME/.config/blast/")
+		b.viper.AddConfigPath(".")
+	}
+	if err := b.viper.ReadInConfig(); err != nil {
+		if _, isNotFound := err.(viper.ConfigFileNotFoundError); !isNotFound {
+			return errors.WithStack(err)
+		}
+	}
+
 	b.viper.BindPFlags(pflag.CommandLine)
 
 	b.viper.SetTypeByDefaultValue(true)
 	b.viper.SetDefault("data", "")
+	b.viper.SetDefault("config", "")
 	b.viper.SetDefault("log", "")
 	b.viper.SetDefault("resume", true)
 	b.viper.SetDefault("repeat", false)
@@ -156,7 +163,7 @@ func (b *Blaster) loadConfigViper() error {
 		}
 	}
 
-	if *printConfig {
+	if *dryRun {
 		by, _ := json.MarshalIndent(b.config, "", "\t")
 		fmt.Println(string(by))
 		os.Exit(0)

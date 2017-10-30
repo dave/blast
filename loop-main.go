@@ -7,8 +7,6 @@ import (
 
 	"encoding/json"
 
-	"sync/atomic"
-
 	"github.com/leemcloughlin/gofarmhash"
 	"github.com/pkg/errors"
 )
@@ -74,7 +72,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 						// (skip only contains successful requests from previous runs).
 						if b.config.Resume {
 							if _, skip := b.skip[hash]; skip {
-								atomic.AddUint64(&b.stats.requestsSkipped, 1)
+								b.metrics.logSkip()
 								continue
 							}
 						}

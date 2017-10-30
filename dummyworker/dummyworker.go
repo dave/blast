@@ -19,7 +19,9 @@ func New() blast.Worker {
 }
 
 type Worker struct {
-	base string
+	base     string
+	print    bool
+	min, max int
 }
 
 func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
@@ -30,8 +32,13 @@ func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 	}
 
 	w.base = config.Base
+	w.print = config.Print
+	w.min = config.Min
+	w.max = config.Max
 
-	fmt.Printf("Dummy worker: Initialising with %s\n", config.Base)
+	if w.print {
+		fmt.Printf("Dummy worker: Initialising with %s\n", config.Base)
+	}
 	return nil
 }
 
@@ -42,19 +49,34 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		return nil, errors.WithStack(err)
 	}
 
-	fmt.Printf("Dummy worker: Sending payload %s %s%s\n", payload.Method, w.base, payload.Path)
+	if w.print {
+		fmt.Printf("Dummy worker: Sending payload %s %s%s\n", payload.Method, w.base, payload.Path)
+	}
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Dummy worker - wait a random time
-	duration := 250 + int(r.Float64()*1000.0)
+	duration := w.min + int(r.Float64()*float64(w.max-w.min))
+
 	select {
 	case <-time.After(time.Millisecond * time.Duration(duration)):
+		// Dummy worker - success!
 	case <-ctx.Done():
-		if ctx.Err() != nil {
-			return map[string]interface{}{"status": ctx.Err().Error()}, ctx.Err()
+		// Dummy worker - interrupted by context
+		err := ctx.Err()
+		var status string
+		switch err {
+		case nil:
+			status = "Unknown"
+			err = errors.New("Context done")
+		case context.DeadlineExceeded:
+			status = "Timeout"
+		case context.Canceled:
+			status = "Cancelled"
+		default:
+			status = fmt.Sprintf("(%s)", err.Error())
 		}
-		return map[string]interface{}{"status": "context done"}, errors.New("context done")
+		return map[string]interface{}{"status": status}, err
 	}
 
 	// Dummy worker - return an error sometimes
@@ -69,7 +91,10 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 }
 
 type workerConfig struct {
-	Base string `mapstructure:"base"`
+	Base  string `mapstructure:"base"`
+	Print bool   `mapstructure:"print"`
+	Min   int    `mapstructure:"min"`
+	Max   int    `mapstructure:"max"`
 }
 
 type payloadConfig struct {

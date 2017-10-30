@@ -22,52 +22,66 @@ blast [options]
 Status
 ======
 
-Blast prints a summary every five seconds. While Blast is running, you can hit enter for an updated 
-summary, or enter a number to change the sending rate. 
+Blast prints a summary every ten seconds. While blast is running, you can hit enter for an updated 
+summary, or enter a number to change the sending rate. Each time you change the rate a new column
+of metrics is created. If the worker returns a field named `status` in it's response, the values 
+are summarised as rows.
 
 Here's an example of the output:
 
 ```
-Summary
+Metrics
 =======
-Rate:          20 items/sec (40 requests/sec)
-Started:       313 requests
-Finished:      263 requests
-Success:       183 requests
-Failed:        80 requests
-Latency:       1465 ms per request (last 100: 1482 ms per request)
-Concurrency:   50 / 50 workers in use
-Skipped ticks: 31 (when all workers are busy)
-               
-Responses      
-=========      
-200:           183 requests (last 100: 67 requests)
-404:           63 requests (last 100: 24 requests)
-500:           17 requests (last 100: 9 requests)
+Concurrency:      1837 / 2000 workers in use
+                                                                                             
+Desired rate:     (all)        5000         1000         400         200         100                       
+Actual rate:      1122         4839         986          399         200         100                       
+Avg concurrency:  1439         1790         365          149         74          36                        
+Duration:         01:20        00:13        00:12        00:23       00:12       00:18                     
+                                                                                             
+Total                                                                                        
+-----                                                                                        
+Started:          89758        63592        12568        9234        2532        1832        
+Finished:         87921        61755        12568        9234        2532        1832        
+Mean:             374.6 ms     371.7 ms     377.6 ms     374.2 ms    376.3 ms    376.4 ms                  
+95th:             486.2 ms     487.1 ms     486.2 ms     489.6 ms    486.4 ms    488.2 ms                  
+                                                                                             
+200                                                                                          
+---                                                                                          
+Count:            84404 (96%)  59321 (96%)  12025 (96%)  8854 (96%)  2441 (96%)  1763 (96%)  
+Mean:             372.9 ms     371.6 ms     373.9 ms     373.7 ms    374.1 ms    375.9 ms                  
+95th:             487.1 ms     485.1 ms     490.2 ms     489.4 ms    485.9 ms    487.8 ms                  
+                                                                                             
+404                                                                                          
+---                                                                                          
+Count:            2633 (3%)    1815 (3%)    397 (3%)     292 (3%)    70 (3%)     59 (3%)     
+Mean:             373.0 ms     372.9 ms     371.5 ms     367.0 ms    365.3 ms    377.4 ms                  
+95th:             487.1 ms     488.1 ms     481.7 ms     483.9 ms    474.2 ms    481.7 ms                  
+                                                                                             
+500                                                                                          
+---                                                                                          
+Count:            887 (1%)     622 (1%)     146 (1%)     88 (1%)     21 (1%)     10 (1%)     
+Mean:             375.4 ms     374.9 ms     380.1 ms     363.8 ms    400.9 ms    386.3 ms                  
+95th:             487.1 ms     487.1 ms     483.4 ms     489.3 ms    497.2 ms    483.9 ms                  
 
-Current rate is 20 items / second. Enter a new rate or press enter to view status.
+Current rate is 5000 requests / second. Enter a new rate or press enter to view status.
 
 Rate?
 ```
-
-If the worker returns a field named `status` in it's response, this is summarized in the 
-`Responses` section.
-
-Note that if multiple payload variants are configured, each item results in several requests, so 
-the resultant rate in requests per second will be greater than the entered rate (items per second).
 
 Config
 ======
 
 Blast is configured by config file, command line flags or environment variables.
 
-The config file should be called `blast-config.xxx`, and can be `json`, `yaml`, `toml` or anything 
-else that [viper](https://github.com/spf13/viper) can read. Blast searches in `/etc/blast/`, 
-`$HOME/.config/blast/` and the current directory for the config file. Only one config file may be 
-used, but environment variables and command line flags override config options.
+The `--config` flag specifies the config file to load, and can be `json`, `yaml`, `toml` or 
+anything else that [viper](https://github.com/spf13/viper) can read. If the config flag is omitted, 
+blast searches for `blast-config.json|yaml|toml` in current directory, `$HOME/.config/blast/` and 
+`/etc/blast/`. Environment variables and command line flags override config file options.
 
-See [blast-config.yaml](https://github.com/dave/blast/blob/master/blast-config.yaml) for an 
-annotated example.
+See [blast-config.yaml](https://github.com/dave/blast/blob/master/blast-config.yaml) for a simple 
+annotated example. See [test-config-load-test.yaml](https://github.com/dave/blast/blob/master/test-config-load-test.yaml)
+for a load-testing specific example.
 
 Templates
 =========
@@ -169,5 +183,6 @@ the `--worker-variants` flag.
 
 To do
 =====  
+- [ ] GCS worker with automatic authentication
 - [ ] Adjust rate automatically in response to latency? PID controller?  
 - [ ] Only use part of file: part i of j parts  
