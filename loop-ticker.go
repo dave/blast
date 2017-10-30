@@ -3,14 +3,13 @@ package blast
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 )
 
 func (b *Blaster) startTickerLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
-	ticker := time.NewTicker(time.Second / time.Duration(b.rate))
+	ticker := time.NewTicker(time.Second / time.Duration(b.rate/float64(len(b.config.PayloadVariants))))
 
 	go func() {
 		defer b.mainWait.Done()
@@ -27,13 +26,14 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 			case rate := <-b.changeRateChannel:
 				b.rate = rate
 				ticker.Stop()
-				ticker = time.NewTicker(time.Second / time.Duration(b.rate))
+				ticker = time.NewTicker(time.Second / time.Duration(b.rate/float64(len(b.config.PayloadVariants))))
+				b.metrics.addSegment(b.rate)
 				b.printStatus(false)
 			case b.mainChannel <- struct{}{}:
 				// if main loop is waiting, send it a message
 			default:
 				// if main loop is busy, skip this tick
-				atomic.AddUint64(&b.stats.ticksSkipped, 1)
+				b.metrics.logMiss()
 			}
 		}
 	}()

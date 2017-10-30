@@ -34,6 +34,6 @@ func (b *Blaster) error(err error) {
 	case b.errorChannel <- err:
 	default:
 		// don't send to error channel if errorChannel isn't listening
-		atomic.AddUint64(&b.stats.errorsIgnored, 1)
+		atomic.AddUint64(&b.errorsIgnored, 1)
 	}
 }

@@ -6,8 +6,6 @@ import (
 
 	"strings"
 
-	"sync/atomic"
-
 	"time"
 
 	"encoding/json"
@@ -71,11 +69,12 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 
 func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 
-	atomic.AddInt64(&b.stats.workersBusy, 1)
-	defer atomic.AddInt64(&b.stats.workersBusy, -1)
+	currentSegment := b.metrics.currentSegment()
+	b.metrics.logStart(currentSegment)
 
-	// Count the started request
-	atomic.AddUint64(&b.stats.requestsStarted, 1)
+	b.metrics.logBusy(currentSegment)
+	b.metrics.busy.Inc(1)
+	defer b.metrics.busy.Dec(1)
 
 	// Record the start time
 	start := time.Now()
@@ -127,16 +126,6 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 		return
 	}
 
-	elapsed := time.Since(start).Nanoseconds() / 1000000
-	if success {
-		atomic.AddUint64(&b.stats.requestsSuccess, 1)
-		atomic.AddUint64(&b.stats.requestsSuccessDuration, uint64(elapsed))
-		b.stats.requestsDurationQueue.Add(int(elapsed))
-	} else {
-		atomic.AddUint64(&b.stats.requestsFailed, 1)
-	}
-	atomic.AddUint64(&b.stats.requestsFinished, 1)
-
 	var val string
 	if out != nil {
 		if status, ok := out["status"]; ok {
@@ -146,8 +135,7 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 	if val == "" {
 		val = "(none)"
 	}
-	b.stats.requestsStatusTotal.Increment(val)
-	b.stats.requestsStatusQueue.Add(val)
+	b.metrics.logFinish(currentSegment, val, time.Since(start))
 
 	var fields []string
 	for _, key := range b.config.LogData {

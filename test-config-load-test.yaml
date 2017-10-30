@@ -1,0 +1,19 @@
+# blast --config="test-config-load-test.yaml"
+data: "data.csv"
+log: "out.log"
+resume: false
+repeat: true
+rate: 20000
+workers: 2000
+worker-type: "dummy"
+payload-template:
+  method: "POST"
+  path: "/{{user_name}}/{{action}}/{{type}}/"
+worker-template:
+  print: false
+  base: "https://api.my-api.com"
+  min: 250
+  max: 500
+worker-variants:
+  - region: "europe-west1"
+  - region: "us-east1"

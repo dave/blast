@@ -18,7 +18,6 @@ import (
 )
 
 const DEBUG = false
-const INSTANT_COUNT = 100
 
 type Blaster struct {
 	config          *configDef
@@ -50,8 +49,9 @@ type Blaster struct {
 
 	workerTypes map[string]func() Worker
 
-	stats statsDef
-	err   error
+	errorsIgnored uint64
+	metrics       *metricsDef
+	err           error
 }
 
 type DataReader interface {
@@ -61,22 +61,6 @@ type DataReader interface {
 type LogWriteFlusher interface {
 	Write(record []string) error
 	Flush()
-}
-
-type statsDef struct {
-	requestsStarted         uint64
-	requestsFinished        uint64
-	requestsSkipped         uint64
-	requestsSuccess         uint64
-	requestsFailed          uint64
-	requestsSuccessDuration uint64
-	requestsDurationQueue   *FiloQueueInt
-	requestsStatusQueue     *FiloQueueString
-	requestsStatusTotal     *ThreadSaveMapStringInt
-
-	workersBusy   int64
-	ticksSkipped  uint64
-	errorsIgnored uint64
 }
 
 func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
@@ -95,12 +79,8 @@ func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 		logChannel:             make(chan logRecord),
 		mainChannel:            make(chan struct{}),
 		workerChannel:          make(chan workDef),
-		stats: statsDef{
-			requestsDurationQueue: &FiloQueueInt{},
-			requestsStatusQueue:   &FiloQueueString{},
-			requestsStatusTotal:   NewThreadSaveMapStringInt(),
-		},
 	}
+	b.metrics = newMetricsDef(b)
 
 	// trap Ctrl+C and call cancel on the context
 	b.signalChannel = make(chan os.Signal, 1)
@@ -153,6 +133,8 @@ func (b *Blaster) Start(ctx context.Context) error {
 
 func (b *Blaster) start(ctx context.Context) error {
 
+	b.metrics.addSegment(b.rate)
+
 	b.startTickerLoop(ctx)
 	b.startMainLoop(ctx)
 	b.startErrorLoop(ctx)
@@ -182,7 +164,7 @@ func (b *Blaster) start(ctx context.Context) error {
 
 	if b.err != nil {
 		fmt.Fprintln(b.out, "")
-		errorsIgnored := atomic.LoadUint64(&b.stats.errorsIgnored)
+		errorsIgnored := atomic.LoadUint64(&b.errorsIgnored)
 		if errorsIgnored > 0 {
 			fmt.Fprintf(b.out, "%d errors were ignored because we were already exiting with an error.\n", errorsIgnored)
 		}
