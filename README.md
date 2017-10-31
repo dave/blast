@@ -94,7 +94,7 @@ Required configuration options
 
 data
 ----
-The data file to load. Stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. 
+The data file to load. Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. 
 Data should be in CSV format with a header row. This may be set with the `BLAST_DATA` environment 
 variable or the `--data` flag.
 
@@ -110,13 +110,13 @@ retried). This may be set with the `BLAST_RESUME` environment variable or the `-
 
 rate
 ----
-Initial rate in items per second. Simply enter a new rate during execution to adjust this. This may 
-be set with the `BLAST_RATE` environment variable or the `--rate` flag.
+Initial rate in requests per second. Simply enter a new rate during execution to adjust this. This 
+may be set with the `BLAST_RATE` environment variable or the `--rate` flag.
 
 workers
 -------
-Number of workers. This may be set with the `BLAST_WORKERS` environment variable or the `--workers` 
-flag.
+Number of concurrent workers. This may be set with the `BLAST_WORKERS` environment variable or the 
+`--workers` flag.
 
 worker-type
 -----------
@@ -126,8 +126,8 @@ be set with the `BLAST_WORKER_TYPE` environment variable or the `--worker-type` 
 Your worker should satisfy the `Worker` interface, and optionally `Starter`, `Stopper`. See 
 [httpworker](https://github.com/dave/blast/blob/master/httpworker/httpworker.go) and 
 [dummyworker](https://github.com/dave/blast/blob/master/dummyworker/dummyworker.go) for simple 
-examples. See the [blast command](https://github.com/dave/blast/blob/master/cmd/blast/blast.go) for 
-an example of how to build a command with your custom worker type.
+examples. See the [main.go](https://github.com/dave/blast/blob/master/main.go) for an example of 
+how to build a command with your custom worker type.
 
 payload-template
 ----------------
