@@ -7,12 +7,12 @@ import (
 
 	"bytes"
 
-	"github.com/dave/blast"
+	"github.com/dave/blast/blaster"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 )
 
-func New() blast.Worker {
+func New() blaster.Worker {
 	return &Worker{}
 }
 

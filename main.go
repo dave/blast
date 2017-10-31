@@ -1,4 +1,4 @@
-package main
+package blast
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"os"
 
-	"github.com/dave/blast"
+	"github.com/dave/blast/blaster"
 	"github.com/dave/blast/dummyworker"
 	"github.com/dave/blast/httpworker"
 )
@@ -18,7 +18,7 @@ const DEBUG = false
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	b := blast.New(ctx, cancel)
+	b := blaster.New(ctx, cancel)
 	defer b.Exit()
 
 	b.RegisterWorkerType("dummy", dummyworker.New)

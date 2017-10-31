@@ -1,4 +1,4 @@
-package blast
+package blaster
 
 import (
 	"sync"
@@ -167,8 +167,7 @@ func (m *metricsDef) summary(w io.Writer) {
 	tabs := strings.Repeat("\t", len(segments)+2)
 
 	if m.skipped.Count() > 0 {
-		fmt.Fprintf(w, "Skipped:\t%d from previous runs.\n", m.skipped.Count())
-		fmt.Fprintf(w, "%s\n", tabs)
+		fmt.Fprintf(w, "Skipped:\t%d from previous runs\n", m.skipped.Count())
 	}
 
 	fmt.Fprintf(w, "Concurrency:\t%d / %d workers in use\n", m.busy.Count(), m.blaster.config.Workers)

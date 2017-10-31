@@ -1,4 +1,4 @@
-package blast
+package blaster
 
 import (
 	"bufio"
