@@ -10,7 +10,7 @@ Blast
 Installation
 ============
 ```
-go get -u github.com/dave/blast/cmd/blast
+go get -u github.com/dave/blast
 ```
 
 Usage
@@ -79,7 +79,7 @@ flag specifies the config file to load, and can be `json`, `yaml`, `toml` or any
 Environment variables and command line flags override config file options.
 
 See [blast-config.yaml](https://github.com/dave/blast/blob/master/blast-config.yaml) for a simple 
-annotated example. See [test-config-load-test.yaml](https://github.com/dave/blast/blob/master/test-config-load-test.yaml)
+annotated example. See [blast-config-load-test.yaml](https://github.com/dave/blast/blob/master/blast-config-load-test.yaml)
 for a load-testing specific example.
 
 Templates

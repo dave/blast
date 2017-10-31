@@ -1,4 +1,4 @@
-package blast
+package blaster
 
 import (
 	"bytes"
@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 
 	must(t, b.start(ctx))
 
-	mustMatch(t, outbuf, 1, `\nSuccess\:\s+3 requests\n`)
+	mustMatch(t, outbuf, 1, `\n\[success\]\s*\n---------\s*\nCount\:\s+3\s`)
 
 	outLog.must(t, 1, []string{"45583464115695f2|e60a15c85c691ab8", "true"})
 	outLog.must(t, 2, []string{"6258a554f446f0a7|4111d6d36a631a68", "true"})
@@ -80,8 +80,8 @@ func TestNew(t *testing.T) {
 	must(t, b1.loadPreviousLogsFromReader(outLog.reader()))
 	must(t, b1.start(ctx))
 
-	mustMatch(t, outbuf1, 1, `\nSuccess\:\s+1 requests\n`)
-	mustMatch(t, outbuf1, 1, `\nSkipped\:\s+3 requests \(from previous run\)\n`)
+	mustMatch(t, outbuf1, 1, `\n\[success\]\s*\n---------\s*\nCount\:\s+1\s`)
+	mustMatch(t, outbuf1, 1, `\nSkipped\:\s+3 from previous runs`)
 	outLog.must(t, 4, []string{"b0528e8eb39663df|9010bda07e0d725b", "true"})
 
 	b2, outbuf2 := defaultOptions(
@@ -94,7 +94,7 @@ func TestNew(t *testing.T) {
 	)
 
 	must(t, b2.start(ctx))
-	mustMatch(t, outbuf2, 1, `\nFailed\:\s+1 requests\n`)
+	mustMatch(t, outbuf2, 1, `\n\[fail\]\s*\n------\s*\nCount\:\s+1\s`)
 	outLog.must(t, 5, []string{"d91d9c633503397f|8ecfa63bc2072fe5", "false"})
 
 }
@@ -297,9 +297,9 @@ func (l *LoggingWorker) Send(ctx context.Context, in map[string]interface{}) (ma
 	}
 	l.Log.Append(log)
 	if l.Result {
-		return nil, nil
+		return map[string]interface{}{"status": "[success]"}, nil
 	}
-	return nil, errors.New("fail")
+	return map[string]interface{}{"status": "[fail]"}, errors.New("fail")
 }
 
 type DummyCloser struct{}
