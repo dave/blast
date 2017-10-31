@@ -1,4 +1,4 @@
-package blast
+package main
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 
 	"os"
 
+	//_ "net/http/pprof"
+
 	"github.com/dave/blast/blaster"
 	"github.com/dave/blast/dummyworker"
 	"github.com/dave/blast/httpworker"
@@ -16,6 +18,10 @@ import (
 const DEBUG = false
 
 func main() {
+	//go func() {
+	//	log.Println(http.ListenAndServe("localhost:6060", nil))
+	//}()
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	b := blaster.New(ctx, cancel)
