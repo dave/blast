@@ -2,7 +2,7 @@
 # -------------------------
 #          data
 # -------------------------
-# The data file to load. Stream directly from a GCS bucket with "gs://{bucket}/{filename}.csv". 
+# The data file to load. Load a local file or stream directly from a GCS bucket with "gs://{bucket}/{filename}.csv". 
 # Data should be in CSV format with a header row. This may be set with the BLAST_DATA environment 
 # variable or the --data flag. 
 # -------------------------
@@ -35,16 +35,16 @@ repeat: false
 # -------------------------
 #           rate
 # -------------------------
-# Initial rate in items per second. This may be set with the BLAST_RATE environment variable or the 
-# --rate flag.
+# Initial rate in requests per second. This may be set with the BLAST_RATE environment variable or 
+# the --rate flag.
 # -------------------------
 rate: 5
 
 # -------------------------
 #          workers
 # -------------------------
-# Number of workers. This may be set with the BLAST_WORKERS environment variable or the --workers 
-# flag.
+# Number of concurrent workers. This may be set with the BLAST_WORKERS environment variable or the 
+# --workers flag.
 # -------------------------
 workers: 4
 
