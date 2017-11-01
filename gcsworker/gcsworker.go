@@ -1,4 +1,4 @@
-package httpworker
+package gcsworker
 
 import (
 	"context"
@@ -7,19 +7,32 @@ import (
 
 	"bytes"
 
-	"net/url"
-
 	"errors"
+
+	"net/url"
 
 	"github.com/dave/blast/blaster"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 func New() blaster.Worker {
 	return &Worker{}
 }
 
-type Worker struct{}
+type Worker struct {
+	client *http.Client
+}
+
+func (w *Worker) Start(ctx context.Context, payload map[string]interface{}) error {
+	src, err := google.DefaultTokenSource(ctx)
+	if err != nil {
+		return err
+	}
+	w.client = oauth2.NewClient(ctx, src)
+	return nil
+}
 
 func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[string]interface{}, error) {
 
@@ -39,7 +52,7 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		request.Header.Add(k, v)
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := w.client.Do(request)
 	if err != nil {
 		var status interface{}
 		ue, ok := err.(*url.Error)

@@ -9,9 +9,10 @@ import (
 
 	"fmt"
 
+	"errors"
+
 	"github.com/dave/blast/blaster"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
 
 func New() blaster.Worker {
@@ -28,7 +29,7 @@ func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 
 	var config workerConfig
 	if err := mapstructure.Decode(raw, &config); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	w.base = config.Base
@@ -46,7 +47,7 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 
 	var payload payloadConfig
 	if err := mapstructure.Decode(raw, &payload); err != nil {
-		return nil, errors.WithStack(err)
+		return map[string]interface{}{"status": "Error decoding payload"}, err
 	}
 
 	if w.print {
@@ -74,7 +75,7 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		case context.Canceled:
 			status = "Cancelled"
 		default:
-			status = fmt.Sprintf("(%s)", err.Error())
+			status = err.Error()
 		}
 		return map[string]interface{}{"status": status}, err
 	}

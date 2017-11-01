@@ -10,6 +10,7 @@ import (
 
 	"github.com/dave/blast/blaster"
 	"github.com/dave/blast/dummyworker"
+	"github.com/dave/blast/gcsworker"
 	"github.com/dave/blast/httpworker"
 )
 
@@ -24,6 +25,7 @@ func main() {
 
 	b.RegisterWorkerType("dummy", dummyworker.New)
 	b.RegisterWorkerType("http", httpworker.New)
+	b.RegisterWorkerType("gcs", gcsworker.New)
 
 	if err := b.Start(ctx); err != nil {
 		if DEBUG {
