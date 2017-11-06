@@ -121,6 +121,8 @@ worker-variants:
 For bulk API tasks:
 
 ```yaml
+# data would usually be the filename of a local CSV file, or an object in a GCS bucket. However, 
+# for the purposes of this example, a CSV fragment is also accepted.
 data: |
   user_name,action
   dave,subscribe
