@@ -74,9 +74,9 @@
 
  Config
  ======
- Blast is configured by config file, command line flags or environment variables. The `--config` flag specifies the config file to load, and can be `json`, `yaml`, `toml` or anything else that [viper](https://github.com/spf13/viper) can read. If the config flag is omitted, blast searches for `blast-config.json|yaml|toml|etc` in the current directory, `~/.config/blast/` and `/etc/blast/`. Environment variables and command line flags override config file options.
+ Blast is configured by config file, command line flags or environment variables. The `--config` flag specifies the config file to load, and can be `json`, `yaml`, `toml` or anything else that [viper](https://github.com/spf13/viper) can read. If the config flag is omitted, blast searches for `blast-config.xxx` in the current directory, `$HOME/.config/blast/` and `/etc/blast/`.
 
- See [blast-config.yaml](https://github.com/dave/blast/blob/master/blast-config.yaml) for a simple annotated example. See [blast-config-load-test.yaml](https://github.com/dave/blast/blob/master/blast-config-load-test.yaml) for a load-testing specific example.
+ Environment variables and command line flags override config file options. Environment variables are upper case and prefixed with "BLAST" e.g. `BLAST_PAYLOAD_TEMPLATE`.
 
  Templates
  =========
@@ -84,9 +84,9 @@
 
  Additionally, several simple functions are available to inject random data which is useful in load testing scenarios:
 
- `{{ rand_int -5 5 }}` - a random integer between -5 and 5.
- `{{ rand_float -5 5 }}` - a random float between -5 and 5.
- `{{ rand_string 10 }}` - a random string, length 10.
+ * `{{ rand_int -5 5 }}` - a random integer between -5 and 5.
+ * `{{ rand_float -5 5 }}` - a random float between -5 and 5.
+ * `{{ rand_string 10 }}` - a random string, length 10.
 
 
 Workers
@@ -153,12 +153,12 @@ log-output:
   - "status"
 ```
 
-Required configuration options
-==============================
+Configuration options
+=====================
 
 data
 ----
-Data sets the the data file to load. Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. Data should be in csv format, and if `headers` is not specified the first record will be used as the headers. If a newline character is found, this string is read as the data.
+Data sets the the data file to load. If none is specified, the worker will be called repeatedly until interrupted (useful for load testing). Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. Data should be in csv format, and if `headers` is not specified the first record will be used as the headers. If a newline character is found, this string is read as the data.
 
 log
 ---
@@ -170,11 +170,11 @@ Resume instructs the tool to load the log file and skip previously successful it
 
 rate
 ----
-Rate sets the initial rate in requests per second. Simply enter a new rate during execution to adjust this.
+Rate sets the initial rate in requests per second. Simply enter a new rate during execution to adjust this. (Default: 10 requests / second).
 
 workers
 -------
-Workers sets the number of concurrent workers.
+Workers sets the number of concurrent workers. (Default: 10 workers).
 
 worker-type
 -----------
@@ -185,12 +185,16 @@ payload-template
 PayloadTemplate sets the template that is rendered and passed to the worker `Send` method. When setting this by command line flag or environment variable, use a json encoded string.
 
 
-Optional configuration options
+Advanced configuration options
 ==============================
 
 timeout
 -------
-Timeout sets the deadline in the context passed to the worker. The default value is 1000ms. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 1 second. 
+Timeout sets the deadline in the context passed to the worker. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 1 second. (Default: 1 second). 
+
+headers
+-------
+Headers sets the data file headers. If omitted, the first record of the csv data source is used. When setting this by command line flag or environment variable, use a json encoded string.
 
 log-data
 --------
@@ -200,10 +204,6 @@ log-output
 ----------
 LogOutput sets an array of worker response fields to include in the output log. When setting this by command line flag or environment variable, use a json encoded string.
 
-payload-variants
-----------------
-PayloadVariants sets an array of maps that will cause each data item to be repeated with the provided data. When setting this by command line flag or environment variable, use a json encoded string.
-
 worker-template
 ---------------
 WorkerTemplate sets a template to render and pass to the worker `Start` or `Stop` methods if the worker satisfies the `Starter` or `Stopper` interfaces. Use with `worker-variants` to configure several workers differently to spread load. When setting this by command line flag or environment variable, use a json encoded string.
@@ -212,9 +212,9 @@ worker-variants
 ---------------
 WorkerVariants sets an array of maps that will cause each worker to be initialised with different data. When setting this by command line flag or environment variable, use a json encoded string.
 
-headers
--------
-Headers sets the data file headers. If omitted, the first record of the csv data source is used. When setting this by command line flag or environment variable, use a json encoded string.
+payload-variants
+----------------
+PayloadVariants sets an array of maps that will cause each data item to be repeated with the provided data. When setting this by command line flag or environment variable, use a json encoded string.
 
 Control by code
 ===============

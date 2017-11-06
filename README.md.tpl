@@ -66,8 +66,8 @@ log-output:
   - "status"
 ```
 
-Required configuration options
-==============================
+Configuration options
+=====================
 
 data
 ----
@@ -98,12 +98,16 @@ payload-template
 {{ "Config.PayloadTemplate" | doc }}
 
 
-Optional configuration options
+Advanced configuration options
 ==============================
 
 timeout
 -------
 {{ "Config.Timeout" | doc }} 
+
+headers
+-------
+{{ "Config.Headers" | doc }}
 
 log-data
 --------
@@ -113,10 +117,6 @@ log-output
 ----------
 {{ "Config.LogOutput" | doc }}
 
-payload-variants
-----------------
-{{ "Config.PayloadVariants" | doc }}
-
 worker-template
 ---------------
 {{ "Config.WorkerTemplate" | doc }}
@@ -125,9 +125,9 @@ worker-variants
 ---------------
 {{ "Config.WorkerVariants" | doc }}
 
-headers
--------
-{{ "Config.Headers" | doc }}
+payload-variants
+----------------
+{{ "Config.PayloadVariants" | doc }}
 
 Control by code
 ===============
