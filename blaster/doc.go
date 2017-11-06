@@ -74,9 +74,9 @@ Package blaster provides the back-end for blast - a tool for load testing and se
 
  Config
  ======
- Blast is configured by config file, command line flags or environment variables. The `--config` flag specifies the config file to load, and can be `json`, `yaml`, `toml` or anything else that [viper](https://github.com/spf13/viper) can read. If the config flag is omitted, blast searches for `blast-config.json|yaml|toml|etc` in the current directory, `~/.config/blast/` and `/etc/blast/`. Environment variables and command line flags override config file options.
+ Blast is configured by config file, command line flags or environment variables. The `--config` flag specifies the config file to load, and can be `json`, `yaml`, `toml` or anything else that [viper](https://github.com/spf13/viper) can read. If the config flag is omitted, blast searches for `blast-config.xxx` in the current directory, `$HOME/.config/blast/` and `/etc/blast/`.
 
- See [blast-config.yaml](https://github.com/dave/blast/blob/master/blast-config.yaml) for a simple annotated example. See [blast-config-load-test.yaml](https://github.com/dave/blast/blob/master/blast-config-load-test.yaml) for a load-testing specific example.
+ Environment variables and command line flags override config file options. Environment variables are upper case and prefixed with "BLAST" e.g. `BLAST_PAYLOAD_TEMPLATE`.
 
  Templates
  =========
@@ -84,9 +84,9 @@ Package blaster provides the back-end for blast - a tool for load testing and se
 
  Additionally, several simple functions are available to inject random data which is useful in load testing scenarios:
 
- `{{ rand_int -5 5 }}` - a random integer between -5 and 5.
- `{{ rand_float -5 5 }}` - a random float between -5 and 5.
- `{{ rand_string 10 }}` - a random string, length 10.
+ * `{{ rand_int -5 5 }}` - a random integer between -5 and 5.
+ * `{{ rand_float -5 5 }}` - a random float between -5 and 5.
+ * `{{ rand_string 10 }}` - a random string, length 10.
 
 */
 package blaster

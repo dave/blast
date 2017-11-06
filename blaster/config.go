@@ -21,7 +21,7 @@ import (
 // Note: viper uses the mapstructure lib to unmarshal data, so we need to use the "mapstructure"
 // struct tag key in addition to "json".
 type Config struct {
-	// Data sets the the data file to load. Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. Data should be in csv format, and if `headers` is not specified the first record will be used as the headers. If a newline character is found, this string is read as the data.
+	// Data sets the the data file to load. If none is specified, the worker will be called repeatedly until interrupted (useful for load testing). Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. Data should be in csv format, and if `headers` is not specified the first record will be used as the headers. If a newline character is found, this string is read as the data.
 	Data string `mapstructure:"data" json:"data"`
 
 	// Log sets the filename of the log file to create / append to.
@@ -30,10 +30,10 @@ type Config struct {
 	// Resume instructs the tool to load the log file and skip previously successful items. Failed items will be retried.
 	Resume bool `mapstructure:"resume" json:"resume"`
 
-	// Rate sets the initial rate in requests per second. Simply enter a new rate during execution to adjust this.
+	// Rate sets the initial rate in requests per second. Simply enter a new rate during execution to adjust this. (Default: 10 requests / second).
 	Rate float64 `mapstructure:"rate" json:"rate"`
 
-	// Workers sets the number of concurrent workers.
+	// Workers sets the number of concurrent workers. (Default: 10 workers).
 	Workers int `mapstructure:"workers" json:"workers"`
 
 	// WorkerType sets the selected worker type. Register new worker types with the `RegisterWorkerType` method.
@@ -42,7 +42,7 @@ type Config struct {
 	// PayloadTemplate sets the template that is rendered and passed to the worker `Send` method. When setting this by command line flag or environment variable, use a json encoded string.
 	PayloadTemplate map[string]interface{} `mapstructure:"payload-template" json:"payload-template"`
 
-	// Timeout sets the deadline in the context passed to the worker. The default value is 1000ms. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 1 second.
+	// Timeout sets the deadline in the context passed to the worker. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 1 second. (Default: 1 second).
 	Timeout int `mapstructure:"timeout" json:"timeout"`
 
 	// LogData sets an array of data fields to include in the output log. When setting this by command line flag or environment variable, use a json encoded string.
