@@ -25,11 +25,12 @@ func randFloat(from float64, to float64) interface{} {
 }
 
 func randString(length int) interface{} {
-	var s string
-	for i := 0; i < length; i++ {
-		s += "A" // TODO
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
-	return s
+	return string(b)
 }
 
 func init() {
