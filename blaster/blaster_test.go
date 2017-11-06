@@ -21,27 +21,24 @@ func defaultOptions(
 	cancel context.CancelFunc,
 	in string,
 	workerType string,
-	logWriter LogWriteFlusher,
+	logWriter CsvWriteFlusher,
 	workerLog *LoggingWorkerLog,
 ) (*Blaster, *ThreadSafeBuffer) {
 	b := New(ctx, cancel)
 	b.RegisterWorkerType("success", workerLog.NewSuccess)
 	b.RegisterWorkerType("fail", workerLog.NewFail)
 	b.RegisterWorkerType("hang", workerLog.NewHang)
-	b.config = &configDef{}
-	b.config.Resume = true
-	b.config.Workers = 1
-	b.config.WorkerType = workerType
-	b.config.PayloadVariants = []map[string]string{{}}
-	b.rate = 100
-	b.softTimeout = time.Millisecond * 1000
-	b.hardTimeout = time.Millisecond * 1500
-	b.dataHeaders = []string{"head"}
-	b.dataReader = csv.NewReader(strings.NewReader(in))
+	b.Initialise(ctx, Config{
+		Rate:       100,
+		Resume:     true,
+		Workers:    1,
+		WorkerType: workerType,
+		Headers:    []string{"head"},
+	})
+	b.SetData(strings.NewReader(in))
 	b.logWriter = logWriter
 	outbuf := new(ThreadSafeBuffer)
-	b.out = outbuf
-	b.rateInputReader = strings.NewReader("")
+	b.SetOutput(outbuf)
 	return b, outbuf
 }
 
@@ -77,7 +74,7 @@ func TestNew(t *testing.T) {
 		workerLog,
 	)
 
-	must(t, b1.loadPreviousLogsFromReader(outLog.reader()))
+	must(t, b1.LoadLogs(outLog.reader()))
 	must(t, b1.start(ctx))
 
 	mustMatch(t, outbuf1, 1, `\n\[success\]\s*\n---------\s*\nCount\:\s+1\s`)
@@ -113,11 +110,11 @@ func TestPayloadVariants(t *testing.T) {
 		outLog,
 		workerLog,
 	)
-	b.config.PayloadTemplate = map[string]interface{}{
-		"v1": "{{head}}-{{p1}}",
-		"v2": "{{p2}}",
-	}
-	b.config.PayloadVariants = []map[string]string{
+	must(t, b.SetPayloadTemplate(map[string]interface{}{
+		"v1": "{{.head}}-{{.p1}}",
+		"v2": "{{.p2}}",
+	}))
+	b.PayloadVariants = []map[string]string{
 		{"p1": "p1v1", "p2": "p2v1"},
 		{"p1": "p1v2", "p2": "p2v2"},
 	}
@@ -144,7 +141,7 @@ func TestCancel(t *testing.T) {
 		outLog,
 		workerLog,
 	)
-	b.rate = 20
+	b.Rate = 20
 	finished := make(chan struct{})
 	go func() {
 		must(t, b.start(ctx))
@@ -168,6 +165,7 @@ func TestCancel(t *testing.T) {
 }
 
 func must(t *testing.T, err error) {
+	t.Helper()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,46 +11,84 @@ import (
 
 	"time"
 
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
-type configDef struct {
-	Data            string                 `mapstructure:"data" json:"data"`
-	Log             string                 `mapstructure:"log" json:"log"`
-	LogData         []string               `mapstructure:"log-data" json:"log-data"`
-	LogOutput       []string               `mapstructure:"log-output" json:"log-output"`
-	Resume          bool                   `mapstructure:"resume" json:"resume"`
-	Repeat          bool                   `mapstructure:"repeat" json:"repeat"`
-	Rate            float64                `mapstructure:"rate" json:"rate"`
-	Workers         int                    `mapstructure:"workers" json:"workers"`
-	Timeout         int                    `mapstructure:"timeout" json:"timeout"`
-	WorkerType      string                 `mapstructure:"worker-type" json:"worker-type"`
-	WorkerTemplate  map[string]interface{} `mapstructure:"worker-template" json:"worker-template"`
+// Note: viper uses the mapstructure lib to unmarshal data, so we need to use the "mapstructure"
+// struct tag key in addition to "json".
+type Config struct {
+	// Data sets the the data file to load. Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. Data should be in csv format, and if `headers` is not specified the first record will be used as the headers. If a newline character is found, this string is read as the data.
+	Data string `mapstructure:"data" json:"data"`
+
+	// Log sets the filename of the log file to create / append to.
+	Log string `mapstructure:"log" json:"log"`
+
+	// Resume instructs the tool to load the log file and skip previously successful items. Failed items will be retried.
+	Resume bool `mapstructure:"resume" json:"resume"`
+
+	// Rate sets the initial rate in requests per second. Simply enter a new rate during execution to adjust this.
+	Rate float64 `mapstructure:"rate" json:"rate"`
+
+	// Workers sets the number of concurrent workers.
+	Workers int `mapstructure:"workers" json:"workers"`
+
+	// WorkerType sets the selected worker type. Register new worker types with the `RegisterWorkerType` method.
+	WorkerType string `mapstructure:"worker-type" json:"worker-type"`
+
+	// PayloadTemplate sets the template that is rendered and passed to the worker `Send` method. When setting this by command line flag or environment variable, use a json encoded string.
 	PayloadTemplate map[string]interface{} `mapstructure:"payload-template" json:"payload-template"`
-	PayloadVariants []map[string]string    `mapstructure:"payload-variants" json:"payload-variants"`
-	WorkerVariants  []map[string]string    `mapstructure:"worker-variants" json:"worker-variants"`
+
+	// Timeout sets the deadline in the context passed to the worker. The default value is 1000ms. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 1 second.
+	Timeout int `mapstructure:"timeout" json:"timeout"`
+
+	// LogData sets an array of data fields to include in the output log. When setting this by command line flag or environment variable, use a json encoded string.
+	LogData []string `mapstructure:"log-data" json:"log-data"`
+
+	// LogOutput sets an array of worker response fields to include in the output log. When setting this by command line flag or environment variable, use a json encoded string.
+	LogOutput []string `mapstructure:"log-output" json:"log-output"`
+
+	// PayloadVariants sets an array of maps that will cause each data item to be repeated with the provided data. When setting this by command line flag or environment variable, use a json encoded string.
+	PayloadVariants []map[string]string `mapstructure:"payload-variants" json:"payload-variants"`
+
+	// WorkerVariants sets an array of maps that will cause each worker to be initialised with different data. When setting this by command line flag or environment variable, use a json encoded string.
+	WorkerVariants []map[string]string `mapstructure:"worker-variants" json:"worker-variants"`
+
+	// WorkerTemplate sets a template to render and pass to the worker `Start` or `Stop` methods if the worker satisfies the `Starter` or `Stopper` interfaces. Use with `worker-variants` to configure several workers differently to spread load. When setting this by command line flag or environment variable, use a json encoded string.
+	WorkerTemplate map[string]interface{} `mapstructure:"worker-template" json:"worker-template"`
+
+	// Headers sets the data file headers. If omitted, the first record of the csv data source is used. When setting this by command line flag or environment variable, use a json encoded string.
+	Headers []string `mapstructure:"headers" json:"headers"`
+
+	// Quiet instructs the tool to prevent interactive features. No summary is printed during operation and the rate cannot be changed interactively.
+	Quiet bool `mapstructure:"quiet" json:"quiet"`
 }
 
-func (b *Blaster) loadConfigViper() error {
+func (b *Blaster) LoadConfig() (Config, error) {
 
-	dryRun := pflag.Bool("dry", false, "If true, just prints the current config and exits.")
-	configFlag := pflag.String("config", "", "The config file to load. This may be set with the BLAST_CONFIG environment variable.")
-	pflag.String("data", "", "The data file to load. Load a local file or stream directly from a GCS bucket with 'gs://{bucket}/{filename}.csv'. Data should be in CSV format with a header row. This may be set with the BLAST_DATA environment variable or the data config option.")
-	pflag.String("log", "", "The log file to create / append to. This may be set with the BLAST_LOG environment variable or the log config option.")
-	pflag.Bool("resume", true, "If true, try to load the log file and skip previously successful items (failed items will be retried). This may be set with the BLAST_RESUME environment variable or the resume config option.")
-	pflag.Bool("repeat", false, "When the end of the data file is found, repeats from the start. Useful for load testing. This may be set with the BLAST_REPEAT environment variable or the repeat config option.")
-	pflag.Float64("rate", 1.0, "Initial rate in requests per second. Simply enter a new rate during execution to adjust this. This may be set with the BLAST_RATE environment variable or the rate config option.")
-	pflag.Int("workers", 5, "Number of concurrent workers. This may be set with the BLAST_WORKERS environment variable or the workers config option.")
-	pflag.Int("timeout", 1000, "The context passed to the worker has this timeout (in ms). The default value is 1000ms. Workers must respect this the context cancellation. We exit with an error if any worker is processing for timeout + 500ms. This may be set with the BLAST_TIMEOUT environment variable or the timeout config option.")
-	pflag.String("worker-type", "", "The selected worker type. Register new worker types with the `RegisterWorkerType` method. This may be set with the BLAST_WORKER_TYPE environment variable or the worker-type config option.")
-	pflag.String("log-data", "", "Array of data fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_DATA environment variable or the log-data config option.")
-	pflag.String("log-output", "", "Array of worker response fields to include in the output log. This may be set as a json encoded []string with the BLAST_LOG_OUTPUT environment variable or the log-output config option.")
-	pflag.String("payload-template", "", "This template is rendered and passed to the worker `Send` method. This may be set as a json encoded map[string]interface{} with the BLAST_PAYLOAD_TEMPLATE environment variable or the payload-template config option.")
-	pflag.String("worker-template", "", "If the selected worker type satisfies the `Starter` or `Stopper` interfaces, the worker template will be rendered and passed to the `Start` or `Stop` methods to initialise each worker. Use with `worker-variants` to configure several workers differently to spread load. This may be set as a json encoded map[string]interface{} with the BLAST_WORKER_TEMPLATE environment variable or the worker-template config option.")
-	pflag.String("payload-variants", "", "An array of maps that will cause each item to be repeated with the provided data. This may be set as a json encoded []map[string]string with the BLAST_PAYLOAD_VARIANTS environment variable or the payload-variants config option.")
-	pflag.String("worker-variants", "", "An array of maps that will cause each worker to be initialised with different data. This may be set as a json encoded []map[string]string with the BLAST_WORKER_VARIANTS environment variable or the -worker-variants config option.")
+	c := Config{}
+
+	dryRun := pflag.Bool("dry", false, "`` If true, just prints the current config and exits.")
+	configFlag := pflag.String("config", "", "`` The config file to load.")
+
+	pflag.String("data", "", "`` "+doc["Config.Data"])
+	pflag.String("log", "", "`` "+doc["Config.Log"])
+	pflag.Bool("resume", false, "`` "+doc["Config.Resume"])
+	pflag.String("headers", "", "`` "+doc["Config.Headers"])
+	pflag.Float64("rate", 10.0, "`` "+doc["Config.Rate"])
+	pflag.Int("workers", 10, "`` "+doc["Config.Workers"])
+	pflag.Int("timeout", 1000, "`` "+doc["Config.Timeout"])
+	pflag.String("worker-type", "", "`` "+doc["Config.WorkerType"])
+	pflag.String("log-data", "", "`` "+doc["Config.LogData"])
+	pflag.String("log-output", "", "`` "+doc["Config.LogOutput"])
+	pflag.String("payload-template", "", "`` "+doc["Config.PayloadTemplate"])
+	pflag.String("worker-template", "", "`` "+doc["Config.WorkerTemplate"])
+	pflag.String("payload-variants", "", "`` "+doc["Config.PayloadVariants"])
+	pflag.String("worker-variants", "", "`` "+doc["Config.WorkerVariants"])
+	pflag.Bool("quiet", false, "`` "+doc["Config.Quiet"])
 
 	pflag.Parse()
 
@@ -64,7 +102,7 @@ func (b *Blaster) loadConfigViper() error {
 	}
 	if err := b.viper.ReadInConfig(); err != nil {
 		if _, isNotFound := err.(viper.ConfigFileNotFoundError); !isNotFound {
-			return errors.WithStack(err)
+			return Config{}, errors.WithStack(err)
 		}
 	}
 
@@ -74,109 +112,167 @@ func (b *Blaster) loadConfigViper() error {
 	b.viper.SetDefault("data", "")
 	b.viper.SetDefault("config", "")
 	b.viper.SetDefault("log", "")
-	b.viper.SetDefault("resume", true)
-	b.viper.SetDefault("repeat", false)
-	b.viper.SetDefault("rate", 1.0)
-	b.viper.SetDefault("workers", 5)
+	b.viper.SetDefault("resume", false)
+	b.viper.SetDefault("rate", 10.0)
+	b.viper.SetDefault("workers", 10)
 	b.viper.SetDefault("timeout", 1000)
 	b.viper.SetDefault("worker-type", "")
 	b.viper.SetDefault("log-data", []string{})
 	b.viper.SetDefault("log-output", []string{})
+	b.viper.SetDefault("headers", []string{})
 	b.viper.SetDefault("worker-template", map[string]interface{}{})
 	b.viper.SetDefault("payload-template", map[string]interface{}{})
 	b.viper.SetDefault("payload-variants", []map[string]string{{}})
 	b.viper.SetDefault("worker-variants", []map[string]string{{}})
+	b.viper.SetDefault("quiet", false)
 
 	b.viper.SetEnvPrefix("blast")
 	b.viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	b.viper.AutomaticEnv()
 
-	// Unmarshal the config to the configDef. Note: viper uses the mapstructure lib to unmarshal
-	// data, so we need to use the "mapstructure" struct tag key instead of "json".
-	b.config = &configDef{}
-
 	// viper is unable to unmarshal complex data types, so we must do them manually:
-	if err := b.viper.UnmarshalKey("data", &b.config.Data); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("data", &c.Data); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("log", &b.config.Log); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("log", &c.Log); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("resume", &b.config.Resume); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("resume", &c.Resume); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("repeat", &b.config.Repeat); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("headers", &c.Headers); err != nil {
+		if s := b.viper.GetString("headers"); s != "" {
+			if err := json.Unmarshal([]byte(s), &c.Headers); err != nil {
+				return Config{}, errors.WithStack(err)
+			}
+		}
 	}
-	if err := b.viper.UnmarshalKey("rate", &b.config.Rate); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("rate", &c.Rate); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("workers", &b.config.Workers); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("workers", &c.Workers); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("timeout", &b.config.Timeout); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("timeout", &c.Timeout); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("worker-type", &b.config.WorkerType); err != nil {
-		return errors.WithStack(err)
+	if err := b.viper.UnmarshalKey("worker-type", &c.WorkerType); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("log-data", &b.config.LogData); err != nil {
+	if err := b.viper.UnmarshalKey("log-data", &c.LogData); err != nil {
 		if s := b.viper.GetString("log-data"); s != "" {
-			if err := json.Unmarshal([]byte(s), &b.config.LogData); err != nil {
-				return errors.WithStack(err)
+			if err := json.Unmarshal([]byte(s), &c.LogData); err != nil {
+				return Config{}, errors.WithStack(err)
 			}
 		}
 	}
-	if err := b.viper.UnmarshalKey("log-output", &b.config.LogOutput); err != nil {
+	if err := b.viper.UnmarshalKey("log-output", &c.LogOutput); err != nil {
 		if s := b.viper.GetString("log-output"); s != "" {
-			if err := json.Unmarshal([]byte(s), &b.config.LogOutput); err != nil {
-				return errors.WithStack(err)
+			if err := json.Unmarshal([]byte(s), &c.LogOutput); err != nil {
+				return Config{}, errors.WithStack(err)
 			}
 		}
 	}
-	if err := b.viper.UnmarshalKey("worker-template", &b.config.WorkerTemplate); err != nil {
+	if err := b.viper.UnmarshalKey("worker-template", &c.WorkerTemplate); err != nil {
 		if s := b.viper.GetString("worker-template"); s != "" {
-			if err := json.Unmarshal([]byte(s), &b.config.WorkerTemplate); err != nil {
-				return errors.WithStack(err)
+			if err := json.Unmarshal([]byte(s), &c.WorkerTemplate); err != nil {
+				return Config{}, errors.WithStack(err)
 			}
 		}
 	}
-	if err := b.viper.UnmarshalKey("payload-template", &b.config.PayloadTemplate); err != nil {
+	if err := b.viper.UnmarshalKey("payload-template", &c.PayloadTemplate); err != nil {
 		if s := b.viper.GetString("payload-template"); s != "" {
-			if err := json.Unmarshal([]byte(s), &b.config.PayloadTemplate); err != nil {
-				return errors.WithStack(err)
+			if err := json.Unmarshal([]byte(s), &c.PayloadTemplate); err != nil {
+				return Config{}, errors.WithStack(err)
 			}
 		}
 	}
-	if err := b.viper.UnmarshalKey("worker-variants", &b.config.WorkerVariants); err != nil {
+	if err := b.viper.UnmarshalKey("worker-variants", &c.WorkerVariants); err != nil {
 		if s := b.viper.GetString("worker-variants"); s != "" {
-			if err := json.Unmarshal([]byte(s), &b.config.WorkerVariants); err != nil {
-				return errors.WithStack(err)
+			if err := json.Unmarshal([]byte(s), &c.WorkerVariants); err != nil {
+				return Config{}, errors.WithStack(err)
 			}
 		}
 	}
-	if err := b.viper.UnmarshalKey("payload-variants", &b.config.PayloadVariants); err != nil {
+	if err := b.viper.UnmarshalKey("payload-variants", &c.PayloadVariants); err != nil {
 		if s := b.viper.GetString("payload-variants"); s != "" {
-			if err := json.Unmarshal([]byte(s), &b.config.PayloadVariants); err != nil {
-				return errors.WithStack(err)
+			if err := json.Unmarshal([]byte(s), &c.PayloadVariants); err != nil {
+				return Config{}, errors.WithStack(err)
 			}
 		}
+	}
+	if err := b.viper.UnmarshalKey("quiet", &c.Quiet); err != nil {
+		return Config{}, errors.WithStack(err)
 	}
 
 	if *dryRun {
-		by, _ := json.MarshalIndent(b.config, "", "\t")
+		by, _ := json.MarshalIndent(c, "", "\t")
 		fmt.Println(string(by))
 		os.Exit(0)
 	}
 
-	// Set the current rate to the config rate.
-	b.rate = b.config.Rate
+	return c, nil
+}
 
-	b.softTimeout = time.Duration(b.config.Timeout) * time.Millisecond
-	b.hardTimeout = time.Duration(b.config.Timeout+500) * time.Millisecond
+func (b *Blaster) Initialise(ctx context.Context, c Config) error {
 
-	if b.config.Resume && b.config.Repeat {
-		panic("Can't use repeat and resume at the same time!")
+	if c.Rate != 0 {
+		b.Rate = c.Rate
+	}
+	if c.Workers != 0 {
+		b.Workers = c.Workers
+	}
+	b.Quiet = c.Quiet
+	b.Resume = c.Resume
+
+	if len(c.LogData) > 0 {
+		b.LogData = c.LogData
+	}
+	if len(c.LogOutput) > 0 {
+		b.LogOutput = c.LogOutput
+	}
+
+	if len(c.WorkerVariants) > 0 {
+		b.WorkerVariants = c.WorkerVariants
+	}
+	if len(c.PayloadVariants) > 0 {
+		b.PayloadVariants = c.PayloadVariants
+	}
+
+	if len(c.Headers) > 0 {
+		b.Headers = c.Headers
+	}
+
+	if c.Timeout > 0 {
+		b.SetTimeout(time.Duration(c.Timeout) * time.Millisecond)
+	}
+
+	if c.WorkerType != "" {
+		wf, ok := b.workerTypes[c.WorkerType]
+		if !ok {
+			panic(fmt.Sprintf("Worker type %s not found", c.WorkerType))
+		}
+		b.SetWorker(wf)
+	}
+
+	if err := b.SetPayloadTemplate(c.PayloadTemplate); err != nil {
+		return err
+	}
+
+	if err := b.SetWorkerTemplate(c.PayloadTemplate); err != nil {
+		return err
+	}
+
+	if c.Data != "" {
+		if err := b.openData(ctx, c.Data, len(c.Headers) == 0); err != nil {
+			return err
+		}
+	}
+
+	if c.Log != "" {
+		if err := b.initialiseLog(c.Log); err != nil {
+			return err
+		}
 	}
 
 	return nil

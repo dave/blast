@@ -3,7 +3,6 @@ package blaster
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -14,12 +13,16 @@ import (
 
 func (b *Blaster) startRateLoop(ctx context.Context) {
 
+	if b.inputReader == nil {
+		return
+	}
+
 	b.mainWait.Add(1)
 
 	readString := func() chan string {
 		c := make(chan string)
 		go func() {
-			reader := bufio.NewReader(b.rateInputReader)
+			reader := bufio.NewReader(b.inputReader)
 			text, err := reader.ReadString('\n')
 			if err != nil {
 				if err == io.EOF {
@@ -35,7 +38,7 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 
 	go func() {
 		defer b.mainWait.Done()
-		defer fmt.Fprintln(b.out, "Exiting rate loop")
+		defer b.println("Exiting rate loop")
 		for {
 			select {
 			case <-ctx.Done():

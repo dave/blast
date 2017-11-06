@@ -29,4 +29,3 @@ _testmain.go
 .idea/
 coverage.out
 out.log
-data-long.csv

@@ -13,8 +13,100 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (b *Blaster) loadPreviousLogs() error {
-	logFile, err := os.Open(b.config.Log)
+func (b *Blaster) SetLog(w io.Writer) {
+	if w == nil {
+		b.logWriter = nil
+		b.logCloser = nil
+		return
+	}
+	b.logWriter = csv.NewWriter(w)
+	if c, ok := w.(io.Closer); ok {
+		b.logCloser = c
+	} else {
+		b.logCloser = nil
+	}
+}
+
+func (b *Blaster) WriteLogHeaders() error {
+	fields := []string{"hash", "result"}
+	fields = append(fields, b.LogData...)
+	fields = append(fields, b.LogOutput...)
+	if err := b.logWriter.Write(fields); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (b *Blaster) LoadLogs(r io.Reader) error {
+	logReader := csv.NewReader(r)
+	if _, err := logReader.Read(); err != nil {
+		// skip header
+		if err == io.EOF {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
+	for {
+		record, err := logReader.Read()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return errors.WithStack(err)
+		}
+		var lr logRecord
+		if err := (&lr).fromCsv(record); err != nil {
+			return err
+		}
+		if lr.result {
+			b.skip[lr.hash] = struct{}{}
+		}
+	}
+	return nil
+}
+
+func (b *Blaster) initialiseLog(log string) error {
+
+	if log == "" {
+		return nil
+	}
+
+	if b.Resume {
+		if err := b.openAndLoadLogs(log); err != nil {
+			return err
+		}
+	}
+
+	if !b.Resume {
+		_ = os.Remove(log) // ignore error
+	}
+
+	logFile, err := os.OpenFile(log, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	s, err := logFile.Stat()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	b.SetLog(logFile)
+
+	if s.Size() == 0 {
+		if err := b.WriteLogHeaders(); err != nil {
+			return err
+		}
+	} else {
+		// TODO: Is this needed?
+		logFile.WriteString("\n")
+	}
+
+	return nil
+}
+
+func (b *Blaster) openAndLoadLogs(log string) error {
+	logFile, err := os.Open(log)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -33,112 +125,43 @@ func (b *Blaster) loadPreviousLogs() error {
 	}
 
 	if fs.Size() > 1<<20 {
-		fmt.Fprintf(b.out, "Logs are %v MB, loading can take some time...\n", fs.Size()/(1<<20))
+		b.printf("Logs are %v MB, loading can take some time...\n", fs.Size()/(1<<20))
 	}
 
-	if err := b.loadPreviousLogsFromReader(logFile); err != nil {
+	if err := b.LoadLogs(logFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Blaster) loadPreviousLogsFromReader(r io.Reader) error {
-	logReader := csv.NewReader(r)
-	// skip header
-	if _, err := logReader.Read(); err != nil {
-		if err == io.EOF {
-			return nil
-		}
-		return errors.WithStack(err)
-	}
-	for {
-		record, err := logReader.Read()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return errors.WithStack(err)
-		}
-		var lr logRecord
-		if err := (&lr).FromCsv(record); err != nil {
-			return err
-		}
-		if lr.Result {
-			b.skip[lr.Hash] = struct{}{}
-		}
-	}
-	return nil
-}
-
-func (b *Blaster) openLogAndInit() error {
-
-	if b.config.Resume {
-		if err := b.loadPreviousLogs(); err != nil {
-			return err
-		}
-	}
-
-	if !b.config.Resume {
-		_ = os.Remove(b.config.Log) // ignore error
-	}
-
-	logFile, err := os.OpenFile(b.config.Log, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	s, err := logFile.Stat()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	b.logWriter = csv.NewWriter(logFile)
-	b.logCloser = logFile
-	if s.Size() == 0 {
-		fields := []string{"hash", "result"}
-		fields = append(fields, b.config.LogData...)
-		fields = append(fields, b.config.LogOutput...)
-		if err := b.logWriter.Write(fields); err != nil {
-			return errors.WithStack(err)
-		}
-	} else {
-		logFile.WriteString("\n")
-	}
-
-	return nil
-}
-
-func (b *Blaster) flushAndCloseLog() {
-	b.logWriter.Flush()
-	_ = b.logCloser.Close() // ignore error
-}
-
 type logRecord struct {
-	Hash   farmhash.Uint128
-	Result bool
-	Fields []string
+	hash   farmhash.Uint128
+	result bool
+	fields []string
 }
 
-func (l logRecord) ToCsv() []string {
+func (l logRecord) toCsv() []string {
 	out := []string{
-		fmt.Sprintf("%x|%x", l.Hash.First, l.Hash.Second),
-		fmt.Sprint(l.Result),
+		fmt.Sprintf("%x|%x", l.hash.First, l.hash.Second),
+		fmt.Sprint(l.result),
 	}
-	return append(out, l.Fields...)
+	return append(out, l.fields...)
 }
 
-func (l *logRecord) FromCsv(in []string) error {
+func (l *logRecord) fromCsv(in []string) error {
 	var err error
 	s := in[0]
 	pos := strings.Index(s, "|")
-	l.Hash.First, err = strconv.ParseUint(s[:pos], 16, 64)
+	l.hash.First, err = strconv.ParseUint(s[:pos], 16, 64)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	l.Hash.Second, err = strconv.ParseUint(s[pos+1:], 16, 64)
+	l.hash.Second, err = strconv.ParseUint(s[pos+1:], 16, 64)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	l.Result, err = strconv.ParseBool(in[1])
+	l.result, err = strconv.ParseBool(in[1])
 	if err != nil {
 		return errors.WithStack(err)
 	}

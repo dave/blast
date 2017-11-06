@@ -70,11 +70,11 @@ func (m *metricsDef) logStart(segment int) {
 	m.segments[segment].logStart()
 }
 
-func (m *metricsDef) logFinish(segment int, status string, elapsed time.Duration) {
+func (m *metricsDef) logFinish(segment int, status string, elapsed time.Duration, success bool) {
 	m.sync.RLock()
 	defer m.sync.RUnlock()
-	m.all.logFinish(status, elapsed)
-	m.segments[segment].logFinish(status, elapsed)
+	m.all.logFinish(status, elapsed, success)
+	m.segments[segment].logFinish(status, elapsed, success)
 }
 
 func (m *metricsDef) addSegment(rate float64) {
@@ -89,8 +89,10 @@ func (m *metricsDef) addSegment(rate float64) {
 
 func (m *metricsDef) newMetricsItem() *metricsItem {
 	return &metricsItem{
-		start:  metrics.NewRegisteredCounter("start", m.registry),
-		finish: metrics.NewRegisteredTimer("finish", m.registry),
+		start:   metrics.NewRegisteredCounter("start", m.registry),
+		finish:  metrics.NewRegisteredTimer("finish", m.registry),
+		success: metrics.NewRegisteredCounter("success", m.registry),
+		fail:    metrics.NewRegisteredCounter("fail", m.registry),
 	}
 }
 
@@ -130,19 +132,31 @@ func (m *metricsSegment) logStart() {
 	m.total.start.Inc(1)
 }
 
-func (m *metricsSegment) logFinish(status string, elapsed time.Duration) {
+func (m *metricsSegment) logFinish(status string, elapsed time.Duration, success bool) {
 	m.sync.Lock()
 	defer m.sync.Unlock()
-	m.total.finish.Update(elapsed)
+
 	if _, ok := m.status[status]; !ok {
 		m.status[status] = m.def.newMetricsItem()
 	}
+
+	m.total.finish.Update(elapsed)
 	m.status[status].finish.Update(elapsed)
+
+	if success {
+		m.total.success.Inc(1)
+		m.status[status].success.Inc(1)
+	} else {
+		m.total.fail.Inc(1)
+		m.status[status].fail.Inc(1)
+	}
 }
 
 type metricsItem struct {
-	start  metrics.Counter
-	finish metrics.Timer
+	start   metrics.Counter
+	finish  metrics.Timer
+	success metrics.Counter
+	fail    metrics.Counter
 }
 
 func (m *metricsDef) summary(w io.Writer) {
@@ -170,7 +184,7 @@ func (m *metricsDef) summary(w io.Writer) {
 		fmt.Fprintf(w, "Skipped:\t%d from previous runs\n", m.skipped.Count())
 	}
 
-	fmt.Fprintf(w, "Concurrency:\t%d / %d workers in use\n", m.busy.Count(), m.blaster.config.Workers)
+	fmt.Fprintf(w, "Concurrency:\t%d / %d workers in use\n", m.busy.Count(), m.blaster.Workers)
 	fmt.Fprintf(w, "%s\n", tabs)
 
 	if DEBUG {
@@ -246,6 +260,24 @@ func (m *metricsDef) printRows(w io.Writer, all bool, segments []int, tabs strin
 				fmt.Fprint(w, "0\t")
 			} else {
 				fmt.Fprintf(w, "%d\t", status(i).finish.Count())
+			}
+		}
+		fmt.Fprint(w, "\n")
+		fmt.Fprintf(w, "Success:\t%d\t", total.success.Count())
+		for _, i := range segments {
+			if status(i) == nil {
+				fmt.Fprint(w, "0\t")
+			} else {
+				fmt.Fprintf(w, "%d\t", status(i).success.Count())
+			}
+		}
+		fmt.Fprint(w, "\n")
+		fmt.Fprintf(w, "Fail:\t%d\t", total.fail.Count())
+		for _, i := range segments {
+			if status(i) == nil {
+				fmt.Fprint(w, "0\t")
+			} else {
+				fmt.Fprintf(w, "%d\t", status(i).fail.Count())
 			}
 		}
 		fmt.Fprint(w, "\n")

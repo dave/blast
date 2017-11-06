@@ -2,16 +2,19 @@ package blaster
 
 import (
 	"context"
-	"fmt"
 )
 
 func (b *Blaster) startLogLoop(ctx context.Context) {
+
+	if b.logWriter == nil {
+		return
+	}
 
 	b.mainWait.Add(1)
 
 	go func() {
 		defer b.mainWait.Done()
-		defer fmt.Fprintln(b.out, "Exiting log loop")
+		defer b.println("Exiting log loop")
 		var count uint64
 		for {
 			count++
@@ -21,7 +24,7 @@ func (b *Blaster) startLogLoop(ctx context.Context) {
 				// exit gracefully
 				return
 			case lr := <-b.logChannel:
-				b.logWriter.Write(lr.ToCsv())
+				b.logWriter.Write(lr.toCsv())
 				if count%1000 == 0 {
 					b.logWriter.Flush()
 				}
