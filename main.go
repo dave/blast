@@ -1,5 +1,7 @@
 package main
 
+//go:generate becca -package=github.com/dave/blast/blaster -literals=blaster/doc-gen.go
+
 import (
 	"context"
 	"log"
@@ -27,7 +29,7 @@ func main() {
 	b.RegisterWorkerType("http", httpworker.New)
 	b.RegisterWorkerType("gcs", gcsworker.New)
 
-	if err := b.Start(ctx); err != nil {
+	if err := b.Command(ctx); err != nil {
 		if DEBUG {
 			log.Fatal(fmt.Printf("%+v", err))
 		} else {

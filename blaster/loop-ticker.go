@@ -2,18 +2,17 @@ package blaster
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
 func (b *Blaster) startTickerLoop(ctx context.Context) {
 
 	b.mainWait.Add(1)
-	ticker := time.NewTicker(time.Second / time.Duration(b.rate/float64(len(b.config.PayloadVariants))))
+	ticker := time.NewTicker(time.Second / time.Duration(b.Rate/float64(len(b.PayloadVariants))))
 
 	go func() {
 		defer b.mainWait.Done()
-		defer fmt.Fprintln(b.out, "Exiting ticker loop")
+		defer b.println("Exiting ticker loop")
 		for {
 			<-ticker.C
 			select {
@@ -24,10 +23,10 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 				ticker.Stop()
 				return
 			case rate := <-b.changeRateChannel:
-				b.rate = rate
+				b.Rate = rate
 				ticker.Stop()
-				ticker = time.NewTicker(time.Second / time.Duration(b.rate/float64(len(b.config.PayloadVariants))))
-				b.metrics.addSegment(b.rate)
+				ticker = time.NewTicker(time.Second / time.Duration(b.Rate/float64(len(b.PayloadVariants))))
+				b.metrics.addSegment(b.Rate)
 				b.printStatus(false)
 			case b.mainChannel <- struct{}{}:
 				// if main loop is waiting, send it a message

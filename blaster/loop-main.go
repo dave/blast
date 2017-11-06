@@ -2,7 +2,6 @@ package blaster
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"encoding/json"
@@ -17,41 +16,36 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 
 	go func() {
 		defer b.mainWait.Done()
-		defer fmt.Fprintln(b.out, "Exiting main loop")
+		defer b.println("Exiting main loop")
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-b.mainChannel:
 				for {
-					record, err := b.dataReader.Read()
-					if err != nil {
-						if err == io.EOF {
-							if b.config.Repeat {
-								b.closeDataFile()
-								if _, err := b.openDataFile(ctx); err != nil {
-									b.error(errors.WithStack(err))
-									return
-								}
-								continue
-							} else {
-								fmt.Fprintln(b.out, "Found end of data file")
+					var record []string
+					if b.dataReader != nil {
+						var err error
+						record, err = b.dataReader.Read()
+						if err != nil {
+							if err == io.EOF {
+								b.println("Found end of data file")
 								// finish gracefully
 								close(b.dataFinishedChannel)
 								return
 							}
+							b.error(errors.WithStack(err))
+							return
 						}
-						b.error(errors.WithStack(err))
-						return
 					}
 
 					skipped := true
 
-					for _, payloadVariantData := range b.config.PayloadVariants {
+					for _, payloadVariantData := range b.PayloadVariants {
 
 						// Build the full data map that will be passed to the worker
 						data := map[string]string{}
-						for i, k := range b.dataHeaders {
+						for i, k := range b.Headers {
 							// Add data from the CSV data source
 							data[k] = record[i]
 						}
@@ -60,26 +54,29 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 							data[k] = v
 						}
 
-						// Calculate the hash of the incoming data
-						j, err := json.Marshal(data)
-						if err != nil {
-							b.error(errors.WithStack(err))
-							return
-						}
-						hash := farmhash.Hash128(j)
+						var hash farmhash.Uint128
+						if b.logWriter != nil {
+							// Calculate the hash of the incoming data
+							j, err := json.Marshal(data)
+							if err != nil {
+								b.error(errors.WithStack(err))
+								return
+							}
+							hash = farmhash.Hash128(j)
 
-						// In resume mode, check to see if the hash occurred in a previous run
-						// (skip only contains successful requests from previous runs).
-						if b.config.Resume {
-							if _, skip := b.skip[hash]; skip {
-								b.metrics.logSkip()
-								continue
+							// In resume mode, check to see if the hash occurred in a previous run
+							// (skip only contains successful requests from previous runs).
+							if b.Resume {
+								if _, skip := b.skip[hash]; skip {
+									b.metrics.logSkip()
+									continue
+								}
 							}
 						}
 
 						skipped = false
 
-						b.workerChannel <- workDef{Data: data, Hash: hash}
+						b.workerChannel <- workDef{data: data, hash: hash}
 					}
 					if skipped {
 						// if we've skipped all variants, continue with the next item immediately
@@ -93,6 +90,6 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 }
 
 type workDef struct {
-	Data map[string]string
-	Hash farmhash.Uint128
+	data map[string]string
+	hash farmhash.Uint128
 }

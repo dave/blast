@@ -2,7 +2,6 @@ package blaster
 
 import (
 	"context"
-	"fmt"
 	"sync/atomic"
 )
 
@@ -12,7 +11,7 @@ func (b *Blaster) startErrorLoop(ctx context.Context) {
 
 	go func() {
 		defer b.mainWait.Done()
-		defer fmt.Fprintln(b.out, "Exiting error loop")
+		defer b.println("Exiting error loop")
 		for {
 			select {
 			// don't react to ctx.Done() here because we may need to wait until workers have finished
@@ -20,7 +19,7 @@ func (b *Blaster) startErrorLoop(ctx context.Context) {
 				// exit gracefully
 				return
 			case err := <-b.errorChannel:
-				fmt.Fprintln(b.out, "Exiting with fatal error...")
+				b.println("Exiting with fatal error...")
 				b.err = err
 				b.cancel()
 				return

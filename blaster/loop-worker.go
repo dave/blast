@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"strings"
-
 	"time"
 
 	"encoding/json"
@@ -14,25 +12,24 @@ import (
 )
 
 func (b *Blaster) startWorkers(ctx context.Context) {
-	for i := 0; i < b.config.Workers; i++ {
+	for i := 0; i < b.Workers; i++ {
 
 		// assign rotated vars from config
 		workerVariantData := map[string]string{}
-		if b.config.WorkerVariants != nil {
-			for k, v := range b.config.WorkerVariants[i%len(b.config.WorkerVariants)] {
+		if b.WorkerVariants != nil {
+			for k, v := range b.WorkerVariants[i%len(b.WorkerVariants)] {
 				workerVariantData[k] = v
 			}
 		}
 
-		workerFunc, ok := b.workerTypes[b.config.WorkerType]
-		if !ok {
-			b.error(errors.Errorf("Worker type %s not found", b.config.WorkerType))
-			return
-		}
-		w := workerFunc()
+		w := b.workerFunc()
 
 		if s, ok := w.(Starter); ok {
-			workerSetup := replaceMap(b.config.WorkerTemplate, workerVariantData)
+			workerSetup, err := renderMap(b.workerRenderer, workerVariantData)
+			if err != nil {
+				b.error(err)
+				return
+			}
 			if err := s.Start(ctx, workerSetup); err != nil {
 				b.error(errors.WithStack(err))
 				return
@@ -44,7 +41,11 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 			defer b.workerWait.Done()
 			defer func() {
 				if s, ok := w.(Stopper); ok {
-					workerSetup := replaceMap(b.config.WorkerTemplate, workerVariantData)
+					workerSetup, err := renderMap(b.workerRenderer, workerVariantData)
+					if err != nil {
+						b.error(err)
+						return
+					}
 					if err := s.Stop(ctx, workerSetup); err != nil {
 						b.error(errors.WithStack(err))
 						return
@@ -60,14 +61,17 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 					// exit gracefully
 					return
 				case work := <-b.workerChannel:
-					b.send(ctx, w, work)
+					if err := b.send(ctx, w, work); err != nil {
+						b.error(err)
+						return
+					}
 				}
 			}
 		}(i)
 	}
 }
 
-func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
+func (b *Blaster) send(ctx context.Context, w Worker, work workDef) error {
 
 	currentSegment := b.metrics.currentSegment()
 	b.metrics.logStart(currentSegment)
@@ -80,7 +84,10 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 	start := time.Now()
 
 	// Render the payload template with the data generated above
-	renderedTemplate := replaceMap(b.config.PayloadTemplate, work.Data)
+	renderedTemplate, err := renderMap(b.payloadRenderer, work.data)
+	if err != nil {
+		return err
+	}
 
 	// Create a child context with the selected timeout
 	child, cancel := context.WithTimeout(ctx, b.softTimeout)
@@ -90,7 +97,6 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 
 	success := true
 	var out map[string]interface{}
-	var err error
 	go func() {
 		out, err = w.Send(child, renderedTemplate)
 		if err != nil {
@@ -122,8 +128,8 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 		// If we get here then the worker is not respecting the context cancellation deadline, and
 		// we should exit with an error. We don't simply log this as an unsuccessful request
 		// because the sending goroutine is still running and would crete a memory leak.
-		b.error(errors.New("A worker was still sending after timeout + 500ms. This indicates a bug in the worker code. Workers should immediately exit on receiving a signal from ctx.Done()."))
-		return
+		b.error(errors.New("A worker was still sending after timeout + 1 second. This indicates a bug in the worker code. Workers should immediately exit on receiving a signal from ctx.Done()."))
+		return nil
 	}
 
 	var val string
@@ -135,32 +141,50 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) {
 	if val == "" {
 		val = "(none)"
 	}
-	b.metrics.logFinish(currentSegment, val, time.Since(start))
+	b.metrics.logFinish(currentSegment, val, time.Since(start), success)
 
-	var fields []string
-	for _, key := range b.config.LogData {
-		var val string
-		if v, ok := work.Data[key]; ok {
-			val = v
-		}
-		fields = append(fields, val)
-	}
-	for _, key := range b.config.LogOutput {
-		var val string
-		if out != nil {
-			if v, ok := out[key]; ok {
-				val = stringify(v)
+	if b.logWriter != nil {
+		var fields []string
+		for _, key := range b.LogData {
+			var val string
+			if v, ok := work.data[key]; ok {
+				val = v
 			}
+			fields = append(fields, val)
 		}
-		fields = append(fields, val)
-	}
+		for _, key := range b.LogOutput {
+			var val string
+			if out != nil {
+				if v, ok := out[key]; ok {
+					val = stringify(v)
+				}
+			}
+			fields = append(fields, val)
+		}
 
-	lr := logRecord{
-		Hash:   work.Hash,
-		Result: success,
-		Fields: fields,
+		lr := logRecord{
+			hash:   work.hash,
+			result: success,
+			fields: fields,
+		}
+		b.logChannel <- lr
 	}
-	b.logChannel <- lr
+	return nil
+}
+
+func renderMap(r renderer, data map[string]string) (map[string]interface{}, error) {
+	if r == nil {
+		return map[string]interface{}{}, nil
+	}
+	rendered, err := r.render(data)
+	if err != nil {
+		return nil, err
+	}
+	renderedMap, ok := rendered.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("rendered template not a map")
+	}
+	return renderedMap, nil
 }
 
 func stringify(v interface{}) string {
@@ -175,38 +199,29 @@ func stringify(v interface{}) string {
 	}
 }
 
-func replace(template interface{}, substitutions map[string]string) interface{} {
-	switch template := template.(type) {
-	case string:
-		return replaceString(template, substitutions)
-	case map[string]interface{}:
-		return replaceMap(template, substitutions)
-	case []interface{}:
-		return replaceSlice(template, substitutions)
-	}
-	return template
+type ExampleWorker struct {
+	SendFunc  func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error)
+	StartFunc func(ctx context.Context, payload map[string]interface{}) error
+	StopFunc  func(ctx context.Context, payload map[string]interface{}) error
 }
 
-func replaceMap(template map[string]interface{}, substitutions map[string]string) map[string]interface{} {
-	out := map[string]interface{}{}
-	for k, v := range template {
-		out[k] = replace(v, substitutions)
+func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+	if e.SendFunc != nil {
+		return e.SendFunc(ctx, in)
 	}
-	return out
+	return nil, nil
 }
 
-func replaceSlice(template []interface{}, substitutions map[string]string) []interface{} {
-	out := []interface{}{}
-	for _, v := range template {
-		out = append(out, replace(v, substitutions))
+func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{}) error {
+	if e.StartFunc != nil {
+		return e.StartFunc(ctx, payload)
 	}
-	return out
+	return nil
 }
 
-func replaceString(template string, substitutions map[string]string) string {
-	out := template
-	for key, sub := range substitutions {
-		out = strings.Replace(out, fmt.Sprint("{{", key, "}}"), sub, -1)
+func (e *ExampleWorker) Stop(ctx context.Context, payload map[string]interface{}) error {
+	if e.StopFunc != nil {
+		return e.StopFunc(ctx, payload)
 	}
-	return out
+	return nil
 }
