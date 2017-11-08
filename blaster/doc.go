@@ -4,11 +4,12 @@ Package blaster provides the back-end for blast - a tool for load testing and se
  Blast
  =====
 
- * Blast makes API requests at a fixed rate, based on input data from a CSV file.
+ * Blast makes API requests at a fixed rate.
  * The number of concurrent workers is configurable.
  * The rate may be changed interactively during execution.
  * Blast is protocol agnostic, and adding a new worker type is trivial.
- * With the `resume` option, successful items from previous runs are skipped.
+ * For load testing: random data can be added to API requests.
+ * For batch jobs: CSV data can be loaded from local file or GCS bucket, and successful items from previous runs are skipped.
 
  Installation
  ============
@@ -26,24 +27,19 @@ Package blaster provides the back-end for blast - a tool for load testing and se
  go get -u github.com/dave/blast
  ```
 
- Usage
- =====
- ```
- blast [options]
- ```
-
  Examples
  ========
- An example sending at 20,000 requests per second to a dummy worker:
+ Using the `dummy` worker to send at 20,000 requests per second:
  ```
- blast --rate=20000 --workers=1000 --worker-type="dummy" --worker-template='{"print":false,"min":25,"max":50}'
+ blast --rate=20000 --workers=1000 --worker-type="dummy" --worker-template='{"min":25,"max":50}'
  ```
- This dummy worker returns after a random wait between 25ms and 50ms, and randomly returns 404 and 500 errors.
+ The `dummy` worker returns after a random wait between 25ms and 50ms, and randomly returns 404 and 500 errors.
 
- A real example using the simple http worker to request google.com at 1 request per second:
+ Using the `http` worker to request www.google.com at 1 request per second:
  ```
- blast --rate=1 --workers=1 --worker-type="http" --payload-template='{"method":"GET","url":"http://www.google.com/"}'
+ blast --rate=1 --worker-type="http" --payload-template='{"method":"GET","url":"http://www.google.com/"}'
  ```
+ Warning: this is making real http requests. Don't turn the rate up!
 
  Status
  ======
