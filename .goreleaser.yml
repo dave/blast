@@ -1,0 +1,35 @@
+project_name: blast
+release:
+  github:
+    owner: dave
+    name: blast
+  name_template: '{{.Tag}}'
+brew:
+  github:
+    owner: dave
+    name: tap
+  commit_author:
+    name: "Dave Brophy"
+    email: dave@brophy.uk
+  install: bin.install "blast"
+builds:
+- goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - "amd64"
+  - "386"
+  goarm:
+  - "6"
+  main: .
+  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+  binary: blast
+archive:
+  format: tar.gz
+  name_template: '{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{
+    .Arm }}{{ end }}'
+snapshot:
+  name_template: SNAPSHOT-{{ .Commit }}
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
