@@ -1,3 +1,6 @@
+
+# git tag x.y.z; and git push origin --tags; and goreleaser --rm-dist
+
 project_name: blast
 release:
   github:
@@ -7,7 +10,7 @@ release:
 brew:
   github:
     owner: dave
-    name: tap
+    name: homebrew-blast
   commit_author:
     name: "Dave Brophy"
     email: dave@brophy.uk
