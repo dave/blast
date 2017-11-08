@@ -259,7 +259,7 @@ func (b *Blaster) Initialise(ctx context.Context, c Config) error {
 		return err
 	}
 
-	if err := b.SetWorkerTemplate(c.PayloadTemplate); err != nil {
+	if err := b.SetWorkerTemplate(c.WorkerTemplate); err != nil {
 		return err
 	}
 
