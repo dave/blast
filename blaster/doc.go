@@ -29,17 +29,15 @@ Package blaster provides the back-end for blast - a tool for load testing and se
 
  Examples
  ========
- Using the `dummy` worker to send at 20,000 requests per second:
+ Using the `dummy` worker to send at 20,000 requests per second (the `dummy` worker returns after a wait, and occasionally returns 404 and 500 errors):
  ```
  blast --rate=20000 --workers=1000 --worker-type="dummy" --worker-template='{"min":25,"max":50}'
  ```
- The `dummy` worker returns after a random wait between 25ms and 50ms, and randomly returns 404 and 500 errors.
 
- Using the `http` worker to request www.google.com at 1 request per second:
+ Using the `http` worker to request www.google.com at 1 request per second (warning: this is making real http requests - don't turn the rate up!):
  ```
  blast --rate=1 --worker-type="http" --payload-template='{"method":"GET","url":"http://www.google.com/"}'
  ```
- Warning: this is making real http requests. Don't turn the rate up!
 
  Status
  ======
