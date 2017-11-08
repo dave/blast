@@ -29,12 +29,12 @@
 
  Examples
  ========
- Using the `dummy` worker to send at 20,000 requests per second (the `dummy` worker returns after a wait, and occasionally returns 404 and 500 errors):
+ Using the dummy worker to send at 20,000 requests per second (the dummy worker returns after a random wait, and occasionally returns errors):
  ```
  blast --rate=20000 --workers=1000 --worker-type="dummy" --worker-template='{"min":25,"max":50}'
  ```
 
- Using the `http` worker to request www.google.com at 1 request per second (warning: this is making real http requests - don't turn the rate up!):
+ Using the http worker to request www.google.com at 1 request per second (warning: this is making real http requests - don't turn the rate up!):
  ```
  blast --rate=1 --worker-type="http" --payload-template='{"method":"GET","url":"http://www.google.com/"}'
  ```
