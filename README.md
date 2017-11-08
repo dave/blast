@@ -12,6 +12,16 @@
 
  Installation
  ============
+ ## Mac
+ ```
+ brew tap dave/blast
+ brew install blast
+ ```
+
+ ## Linux
+ See the [releases page](https://github.com/dave/blast/releases)
+
+ ## From source
  ```
  go get -u github.com/dave/blast
  ```
@@ -20,6 +30,19 @@
  =====
  ```
  blast [options]
+ ```
+
+ Examples
+ ========
+ An example sending at 20,000 requests per second to a dummy worker:
+ ```
+ blast --rate=20000 --workers=1000 --worker-type="dummy" --worker-template='{"print":false,"min":25,"max":50}'
+ ```
+ This dummy worker returns after a random wait between 25ms and 50ms, and randomly returns 404 and 500 errors.
+
+ A real example using the simple http worker to request google.com at 1 request per second:
+ ```
+ blast --rate=1 --workers=1 --worker-type="http" --payload-template='{"method":"GET","url":"http://www.google.com/"}'
  ```
 
  Status
