@@ -110,7 +110,7 @@ payload-template:
   path: "/foo/?id={{ rand_int 1 10000000 }}"
 worker-template:
   print: false
-  base: "https://api.my-api.com"
+  base: "https://{{ .region }}.my-api.com"
   min: 10
   max: 20
 worker-variants:

@@ -22,6 +22,7 @@ func New() blaster.Worker {
 type Worker struct {
 	base     string
 	print    bool
+	rand     *rand.Rand
 	min, max int
 }
 
@@ -36,6 +37,7 @@ func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 	w.print = config.Print
 	w.min = config.Min
 	w.max = config.Max
+	w.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	if w.print {
 		fmt.Printf("Dummy worker: Initialising with %s\n", config.Base)
@@ -54,10 +56,8 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		fmt.Printf("Dummy worker: Sending payload %s %s%s\n", payload.Method, w.base, payload.Path)
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	// Dummy worker - wait a random time
-	duration := w.min + int(r.Float64()*float64(w.max-w.min))
+	duration := w.min + int(w.rand.Float64()*float64(w.max-w.min))
 
 	select {
 	case <-time.After(time.Millisecond * time.Duration(duration)):
@@ -81,7 +81,7 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 	}
 
 	// Dummy worker - return an error sometimes
-	errorrand := r.Float64()
+	errorrand := w.rand.Float64()
 	if errorrand > 0.99 {
 		return map[string]interface{}{"status": 500}, errors.New("Error 500")
 	} else if errorrand > 0.96 {
