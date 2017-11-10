@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/dave/blast.svg?branch=master)](https://travis-ci.org/dave/blast) [![Go Report Card](https://goreportcard.com/badge/github.com/dave/blast)](https://goreportcard.com/report/github.com/dave/blast) [![codecov](https://codecov.io/gh/dave/blast/branch/master/graph/badge.svg)](https://codecov.io/gh/dave/blast)
+[![Build Status](https://travis-ci.org/dave/blast.svg?branch=master)](https://travis-ci.org/dave/blast) [![Go Report Card](https://goreportcard.com/badge/github.com/dave/blast)](https://goreportcard.com/report/github.com/dave/blast) <!--[![codecov](https://codecov.io/gh/dave/blast/branch/master/graph/badge.svg)](https://codecov.io/gh/dave/blast)-->
 
 
 
