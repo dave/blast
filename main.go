@@ -1,5 +1,7 @@
 package main
 
+// This generate command uses github.com/dave/rebecca to build the documentation from the
+// README.md.tpl template, and create a dump of doc comments in doc-gen.go.
 //go:generate becca -package=github.com/dave/blast/blaster -literals=blaster/doc-gen.go
 
 import (
@@ -16,7 +18,8 @@ import (
 	"github.com/dave/blast/httpworker"
 )
 
-const DEBUG = false
+// Set debug to true to dump full stack info on every error.
+const debug = false
 
 func main() {
 
@@ -30,7 +33,7 @@ func main() {
 	b.RegisterWorkerType("gcs", gcsworker.New)
 
 	if err := b.Command(ctx); err != nil {
-		if DEBUG {
+		if debug {
 			log.Fatal(fmt.Printf("%+v", err))
 		} else {
 			fmt.Println(err)

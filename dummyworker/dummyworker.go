@@ -1,3 +1,4 @@
+// Package dummyworker implements a worker for testing and examples.
 package dummyworker
 
 import (
@@ -15,10 +16,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// New returns a new dummy worker
 func New() blaster.Worker {
 	return &Worker{}
 }
 
+// Worker is the worker type
 type Worker struct {
 	base     string
 	print    bool
@@ -26,6 +29,7 @@ type Worker struct {
 	min, max int
 }
 
+// Start satisfies the blaster.Starter interface
 func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 
 	var config workerConfig
@@ -45,6 +49,7 @@ func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 	return nil
 }
 
+// Send satisfies the blaster.Worker interface
 func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[string]interface{}, error) {
 
 	var payload payloadConfig
@@ -92,13 +97,19 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 }
 
 type workerConfig struct {
-	Base  string `mapstructure:"base"`
-	Print bool   `mapstructure:"print"`
-	Min   int    `mapstructure:"min"`
-	Max   int    `mapstructure:"max"`
+	// Base sets the base of the http request e.g. `http://foo.com`
+	Base string `mapstructure:"base"`
+	// Print causes the worker to print debug messages
+	Print bool `mapstructure:"print"`
+	// Min is the minimum bound of the random wait, in ms
+	Min int `mapstructure:"min"`
+	// Max is the maximum bound of the random wait, in ms
+	Max int `mapstructure:"max"`
 }
 
 type payloadConfig struct {
+	// Method sets the http method e.g. `GET`, `POST` etc.
 	Method string `mapstructure:"method"`
-	Path   string `mapstructure:"path"`
+	// Path sets the path of the http request e.g. `/foo`
+	Path string `mapstructure:"path"`
 }

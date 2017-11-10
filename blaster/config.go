@@ -20,6 +20,8 @@ import (
 
 // Note: viper uses the mapstructure lib to unmarshal data, so we need to use the "mapstructure"
 // struct tag key in addition to "json".
+
+// Config provides all the standard config options. Use the Initialise method to configure with a provided Config.
 type Config struct {
 	// Data sets the the data file to load. If none is specified, the worker will be called repeatedly until interrupted (useful for load testing). Load a local file or stream directly from a GCS bucket with `gs://{bucket}/{filename}.csv`. Data should be in csv format, and if `headers` is not specified the first record will be used as the headers. If a newline character is found, this string is read as the data.
 	Data string `mapstructure:"data" json:"data"`
@@ -67,6 +69,7 @@ type Config struct {
 	Quiet bool `mapstructure:"quiet" json:"quiet"`
 }
 
+// LoadConfig parses command line flags and loads a config file from disk. A Config is returned which may be used with the Initialise method to complete configuration.
 func (b *Blaster) LoadConfig() (Config, error) {
 
 	c := Config{}
@@ -214,6 +217,7 @@ func (b *Blaster) LoadConfig() (Config, error) {
 	return c, nil
 }
 
+// Initialise configures the Blaster with config options in a provided Config
 func (b *Blaster) Initialise(ctx context.Context, c Config) error {
 
 	if c.Rate != 0 {

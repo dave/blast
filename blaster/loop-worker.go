@@ -128,7 +128,7 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) error {
 		// If we get here then the worker is not respecting the context cancellation deadline, and
 		// we should exit with an error. We don't simply log this as an unsuccessful request
 		// because the sending goroutine is still running and would crete a memory leak.
-		b.error(errors.New("A worker was still sending after timeout + 1 second. This indicates a bug in the worker code. Workers should immediately exit on receiving a signal from ctx.Done()."))
+		b.error(errors.New("a worker was still sending after timeout + 1 second. This indicates a bug in the worker code. Workers should immediately exit on receiving a signal from ctx.Done()"))
 		return nil
 	}
 
@@ -199,12 +199,14 @@ func stringify(v interface{}) string {
 	}
 }
 
+// ExampleWorker facilitates code examples by satisfying the Worker, Starter and Stopper interfaces with provided functions.
 type ExampleWorker struct {
 	SendFunc  func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error)
 	StartFunc func(ctx context.Context, payload map[string]interface{}) error
 	StopFunc  func(ctx context.Context, payload map[string]interface{}) error
 }
 
+// Send satisfies the Worker interface.
 func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 	if e.SendFunc != nil {
 		return e.SendFunc(ctx, in)
@@ -212,6 +214,7 @@ func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (ma
 	return nil, nil
 }
 
+// Start satisfies the Starter interface.
 func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{}) error {
 	if e.StartFunc != nil {
 		return e.StartFunc(ctx, payload)
@@ -219,6 +222,7 @@ func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{
 	return nil
 }
 
+// Stop satisfies the Stopper interface.
 func (e *ExampleWorker) Stop(ctx context.Context, payload map[string]interface{}) error {
 	if e.StopFunc != nil {
 		return e.StopFunc(ctx, payload)

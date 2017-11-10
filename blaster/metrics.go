@@ -123,9 +123,8 @@ type metricsSegment struct {
 func (m *metricsSegment) duration() time.Duration {
 	if m.end == (time.Time{}) {
 		return time.Since(m.start)
-	} else {
-		return m.end.Sub(m.start)
 	}
+	return m.end.Sub(m.start)
 }
 
 func (m *metricsSegment) logStart() {
@@ -173,7 +172,7 @@ func (m *metricsDef) summary(w io.Writer) {
 
 	// find all statuses and order
 	var statuses []string
-	for status, _ := range m.all.status {
+	for status := range m.all.status {
 		statuses = append(statuses, status)
 	}
 	sort.Strings(statuses)
@@ -187,7 +186,7 @@ func (m *metricsDef) summary(w io.Writer) {
 	fmt.Fprintf(w, "Concurrency:\t%d / %d workers in use\n", m.busy.Count(), m.blaster.Workers)
 	fmt.Fprintf(w, "%s\n", tabs)
 
-	if DEBUG {
+	if debug {
 		fmt.Fprintf(w, "Goroutines:\t%d\n", runtime.NumGoroutine())
 		fmt.Fprintf(w, "%s\n", tabs)
 	}
@@ -238,9 +237,8 @@ func fmtDuration(d time.Duration) string {
 	hr := min / 60
 	if hr > 0 {
 		return fmt.Sprintf("%d:%02d:%02d", hr, min%60, sec%60)
-	} else {
-		return fmt.Sprintf("%02d:%02d", min%60, sec%60)
 	}
+	return fmt.Sprintf("%02d:%02d", min%60, sec%60)
 }
 
 func (m *metricsDef) printRows(w io.Writer, all bool, segments []int, tabs string, total *metricsItem, status func(i int) *metricsItem) {

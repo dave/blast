@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ReadHeaders reads one row from the data source and stores that in Headers
 func (b *Blaster) ReadHeaders() error {
 	h, err := b.dataReader.Read()
 	if err != nil {
@@ -23,6 +24,8 @@ func (b *Blaster) ReadHeaders() error {
 	return nil
 }
 
+// SetData sets the CSV data source. If the provided io.Reader also satisfies io.Closer it will be
+// closed on exit.
 func (b *Blaster) SetData(r io.Reader) {
 	if r == nil {
 		b.dataReader = nil
