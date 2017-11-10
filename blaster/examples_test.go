@@ -57,12 +57,12 @@ func ExampleBlaster_Start_loadTest() {
 			fmt.Println(err.Error())
 			return
 		}
-		fmt.Printf("%#v", summary)
+		fmt.Printf("Fail: %d", summary.Fail)
 		wg.Done()
 	}()
 	<-time.After(time.Millisecond * 100)
 	b.Exit()
 	wg.Wait()
 	// Output:
-	// blaster.Summary{Success:10, Fail:0}
+	// Fail: 0
 }
