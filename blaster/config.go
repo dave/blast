@@ -74,8 +74,28 @@ func (b *Blaster) LoadConfig() (Config, error) {
 
 	c := Config{}
 
-	dryRun := pflag.Bool("dry", false, "`` If true, just prints the current config and exits.")
-	configFlag := pflag.String("config", "", "`` The config file to load.")
+	dryRunFlag, configFlag := b.setupFlags()
+
+	if err := b.setupViper(configFlag); err != nil {
+		return Config{}, err
+	}
+
+	if err := b.unmarshalConfig(&c); err != nil {
+		return Config{}, err
+	}
+
+	if dryRunFlag {
+		by, _ := json.MarshalIndent(c, "", "\t")
+		fmt.Println(string(by))
+		os.Exit(0)
+	}
+
+	return c, nil
+}
+
+func (b *Blaster) setupFlags() (dryRunFlag bool, configFlag string) {
+	dryRunFlagRaw := pflag.Bool("dry", false, "`` If true, just prints the current config and exits.")
+	configFlagRaw := pflag.String("config", "", "`` The config file to load.")
 
 	pflag.String("data", "", "`` "+doc["Config.Data"])
 	pflag.String("log", "", "`` "+doc["Config.Log"])
@@ -95,8 +115,19 @@ func (b *Blaster) LoadConfig() (Config, error) {
 
 	pflag.Parse()
 
-	if configFlag != nil && *configFlag != "" {
-		b.viper.SetConfigFile(*configFlag)
+	if dryRunFlagRaw != nil {
+		dryRunFlag = *dryRunFlagRaw
+	}
+	if configFlagRaw != nil {
+		configFlag = *configFlagRaw
+	}
+	return dryRunFlag, configFlag
+}
+
+func (b *Blaster) setupViper(configFlag string) error {
+
+	if configFlag != "" {
+		b.viper.SetConfigFile(configFlag)
 	} else {
 		b.viper.SetConfigName("blast-config") // name of config file (without extension)
 		b.viper.AddConfigPath("/etc/blast/")
@@ -105,7 +136,7 @@ func (b *Blaster) LoadConfig() (Config, error) {
 	}
 	if err := b.viper.ReadInConfig(); err != nil {
 		if _, isNotFound := err.(viper.ConfigFileNotFoundError); !isNotFound {
-			return Config{}, errors.WithStack(err)
+			return errors.WithStack(err)
 		}
 	}
 
@@ -132,89 +163,85 @@ func (b *Blaster) LoadConfig() (Config, error) {
 	b.viper.SetEnvPrefix("blast")
 	b.viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	b.viper.AutomaticEnv()
+	return nil
+}
 
+func (b *Blaster) unmarshalConfig(c *Config) error {
 	// viper is unable to unmarshal complex data types, so we must do them manually:
 	if err := b.viper.UnmarshalKey("data", &c.Data); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("log", &c.Log); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("resume", &c.Resume); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("headers", &c.Headers); err != nil {
 		if s := b.viper.GetString("headers"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.Headers); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("rate", &c.Rate); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("workers", &c.Workers); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("timeout", &c.Timeout); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("worker-type", &c.WorkerType); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 	if err := b.viper.UnmarshalKey("log-data", &c.LogData); err != nil {
 		if s := b.viper.GetString("log-data"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.LogData); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("log-output", &c.LogOutput); err != nil {
 		if s := b.viper.GetString("log-output"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.LogOutput); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("worker-template", &c.WorkerTemplate); err != nil {
 		if s := b.viper.GetString("worker-template"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.WorkerTemplate); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("payload-template", &c.PayloadTemplate); err != nil {
 		if s := b.viper.GetString("payload-template"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.PayloadTemplate); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("worker-variants", &c.WorkerVariants); err != nil {
 		if s := b.viper.GetString("worker-variants"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.WorkerVariants); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("payload-variants", &c.PayloadVariants); err != nil {
 		if s := b.viper.GetString("payload-variants"); s != "" {
 			if err := json.Unmarshal([]byte(s), &c.PayloadVariants); err != nil {
-				return Config{}, errors.WithStack(err)
+				return errors.WithStack(err)
 			}
 		}
 	}
 	if err := b.viper.UnmarshalKey("quiet", &c.Quiet); err != nil {
-		return Config{}, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
-
-	if *dryRun {
-		by, _ := json.MarshalIndent(c, "", "\t")
-		fmt.Println(string(by))
-		os.Exit(0)
-	}
-
-	return c, nil
+	return nil
 }
 
 // Initialise configures the Blaster with config options in a provided Config

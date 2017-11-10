@@ -136,9 +136,9 @@ Control by code
 The blaster package may be used to start blast from code without using the command. Here's a some 
 examples of usage:
 
-{{ "ExampleSimple" | example }}
+{{ "ExampleBlaster_Start_batchJob" | example }}
 
-{{ "ExampleLoadTest" | example }}
+{{ "ExampleBlaster_Start_loadTest" | example }}
  
 To do
 =====  
