@@ -21,7 +21,7 @@ func defaultOptions(
 	cancel context.CancelFunc,
 	in string,
 	workerType string,
-	logWriter CsvWriteFlusher,
+	logWriter csvWriteFlusher,
 	workerLog *LoggingWorkerLog,
 ) (*Blaster, *ThreadSafeBuffer) {
 	b := New(ctx, cancel)

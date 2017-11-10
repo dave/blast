@@ -35,6 +35,7 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 	}()
 }
 
+// PrintStatus prints the status message to the output writer
 func (b *Blaster) PrintStatus(writer io.Writer) {
 	w := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
 	b.metrics.summary(w)

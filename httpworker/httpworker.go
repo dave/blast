@@ -1,3 +1,4 @@
+// Package httpworker implements a simple http worker.
 package httpworker
 
 import (
@@ -15,12 +16,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// New returns a new http worker
 func New() blaster.Worker {
 	return &Worker{}
 }
 
+// Worker is the worker type
 type Worker struct{}
 
+// Send satisfies the blaster.Worker interface
 func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[string]interface{}, error) {
 
 	var payload def
@@ -28,7 +32,7 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		return map[string]interface{}{"status": "Error decoding payload"}, err
 	}
 
-	request, err := http.NewRequest(payload.Method, payload.Url, bytes.NewBufferString(payload.Body))
+	request, err := http.NewRequest(payload.Method, payload.URL, bytes.NewBufferString(payload.Body))
 	if err != nil {
 		return map[string]interface{}{"status": "Error creating request"}, err
 	}
@@ -64,8 +68,12 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 }
 
 type def struct {
-	Method  string            `mapstructure:"method"`
-	Url     string            `mapstructure:"url"`
-	Body    string            `mapstructure:"body"`
+	// Method sets the http method e.g. `GET`, `POST` etc.
+	Method string `mapstructure:"method"`
+	// Url sets the full URL of the http request
+	URL string `mapstructure:"url"`
+	// Body sets the full http body
+	Body string `mapstructure:"body"`
+	// Headers sets the http headers
 	Headers map[string]string `mapstructure:"headers"`
 }

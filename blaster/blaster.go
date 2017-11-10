@@ -15,18 +15,37 @@ import (
 	"github.com/spf13/viper"
 )
 
-const DEBUG = false
+// Set debug to true to print the number of active goroutines with every status.
+const debug = false
 
+// Blaster provides the back-end blast: a simple tool for API load testing and batch jobs. Use the New function to create a Blaster with default values.
 type Blaster struct {
-	Quiet           bool
-	Resume          bool
-	Rate            float64
-	Workers         int
-	LogData         []string
-	LogOutput       []string
-	Headers         []string
+	// Quiet disables the status output.
+	Quiet bool
+
+	// Resume sets the resume option. See Config.Resume for more details.
+	Resume bool
+
+	// Rate sets the initial sending rate. Do not change this during a run - use the ChangeRate method instead. See Config.Resume for more details.
+	Rate float64
+
+	// Workers sets the number of workers. See Config.Workers for more details.
+	Workers int
+
+	// LogData sets the data fields to be logged. See Config.LogData for more details.
+	LogData []string
+
+	// LogOutput sets the output fields to be logged. See Config.LogOutput for more details.
+	LogOutput []string
+
+	// Headers sets the data headers. See Config.Headers for more details.
+	Headers []string
+
+	// PayloadVariants sets the payload variants. See Config.PayloadVariants for more details.
 	PayloadVariants []map[string]string
-	WorkerVariants  []map[string]string
+
+	// WorkerVariants sets the worker variants. See Config.WorkerVariants for more details.
+	WorkerVariants []map[string]string
 
 	workerFunc func() Worker
 
@@ -36,11 +55,11 @@ type Blaster struct {
 	hardTimeout time.Duration
 	skip        map[farmhash.Uint128]struct{}
 
-	logWriter  CsvWriteFlusher
+	logWriter  csvWriteFlusher
 	logCloser  io.Closer
 	outWriter  io.Writer
 	outCloser  io.Closer
-	dataReader CsvReader
+	dataReader csvReader
 	dataCloser io.Closer
 
 	inputReader io.Reader
@@ -69,15 +88,18 @@ type Blaster struct {
 	err           error
 }
 
+// SetTimeout sets the timeout. See Config.Timeout for more details.
 func (b *Blaster) SetTimeout(timeout time.Duration) {
 	b.softTimeout = timeout
 	b.hardTimeout = timeout + time.Second
 }
 
+// SetWorker sets the worker creation function. See httpworker for a simple example.
 func (b *Blaster) SetWorker(wf func() Worker) {
 	b.workerFunc = wf
 }
 
+// SetPayloadTemplate sets the payload template. See Config.PayloadTemplate for more details.
 func (b *Blaster) SetPayloadTemplate(t map[string]interface{}) error {
 	var err error
 	if b.payloadRenderer, err = parseRenderer(t); err != nil {
@@ -86,6 +108,7 @@ func (b *Blaster) SetPayloadTemplate(t map[string]interface{}) error {
 	return nil
 }
 
+// SetWorkerTemplate sets the worker template. See Config.WorkerTemplate for more details.
 func (b *Blaster) SetWorkerTemplate(t map[string]interface{}) error {
 	var err error
 	if b.workerRenderer, err = parseRenderer(t); err != nil {
@@ -94,11 +117,12 @@ func (b *Blaster) SetWorkerTemplate(t map[string]interface{}) error {
 	return nil
 }
 
+// SetInput sets the rate adjustment reader, and allows testing rate adjustments. The Command method sets this to os.Stdin for interactive command line usage.
 func (b *Blaster) SetInput(r io.Reader) {
 	b.inputReader = r
 }
 
-// SetOutput sets the output, and allows the summary output to be redirected. The Command method sets this to os.Stdout.
+// SetOutput sets the summary output writer, and allows the output to be redirected. The Command method sets this to os.Stdout for command line usage.
 func (b *Blaster) SetOutput(w io.Writer) {
 	if w == nil {
 		b.outWriter = nil
@@ -118,6 +142,7 @@ func (b *Blaster) ChangeRate(rate float64) {
 	b.changeRateChannel <- rate
 }
 
+// New creates a new Blaster with defaults.
 func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 
 	b := &Blaster{
@@ -175,12 +200,13 @@ func (b *Blaster) Exit() {
 	b.cancel()
 }
 
+// Summary provides a simple summary of the completed run, and is returned by the Start method.
 type Summary struct {
 	Success int64
 	Fail    int64
 }
 
-// Command process command line flags, loads the config and starts the blast tool
+// Command processes command line flags, loads the config and starts the blast run.
 func (b *Blaster) Command(ctx context.Context) error {
 
 	c, err := b.LoadConfig()
@@ -203,7 +229,7 @@ func (b *Blaster) Command(ctx context.Context) error {
 	return err
 }
 
-// Command starts the blast tool
+// Start starts the blast run without processing any config.
 func (b *Blaster) Start(ctx context.Context) (Summary, error) {
 
 	if b.dataReader == nil && b.Resume {
@@ -285,6 +311,7 @@ func (b *Blaster) start(ctx context.Context) error {
 	return nil
 }
 
+// RegisterWorkerType registers a new worker function that can be referenced in config file by the worker-type string field.
 func (b *Blaster) RegisterWorkerType(key string, workerFunc func() Worker) {
 	b.workerTypes[key] = workerFunc
 }
@@ -315,17 +342,18 @@ type threadSafeWriter struct {
 	m sync.Mutex
 }
 
+// Write writes to the underlying writer in a thread safe manner.
 func (t *threadSafeWriter) Write(p []byte) (n int, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	return t.w.Write(p)
 }
 
-type CsvReader interface {
+type csvReader interface {
 	Read() (record []string, err error)
 }
 
-type CsvWriteFlusher interface {
+type csvWriteFlusher interface {
 	Write(record []string) error
 	Flush()
 }

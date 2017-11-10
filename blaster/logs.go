@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// SetLog sets the log output. If the provided writer also satisfies io.Closer, it will be closed on exit.
 func (b *Blaster) SetLog(w io.Writer) {
 	if w == nil {
 		b.logWriter = nil
@@ -27,6 +28,7 @@ func (b *Blaster) SetLog(w io.Writer) {
 	}
 }
 
+// WriteLogHeaders writes the log headers to the log writer.
 func (b *Blaster) WriteLogHeaders() error {
 	fields := []string{"hash", "result"}
 	fields = append(fields, b.LogData...)
@@ -37,6 +39,7 @@ func (b *Blaster) WriteLogHeaders() error {
 	return nil
 }
 
+// LoadLogs loads the logs from a previous run, and stores successfully completed items so they can be skipped in the current run.
 func (b *Blaster) LoadLogs(r io.Reader) error {
 	logReader := csv.NewReader(r)
 	if _, err := logReader.Read(); err != nil {
@@ -128,11 +131,7 @@ func (b *Blaster) openAndLoadLogs(log string) error {
 		b.printf("Logs are %v MB, loading can take some time...\n", fs.Size()/(1<<20))
 	}
 
-	if err := b.LoadLogs(logFile); err != nil {
-		return err
-	}
-
-	return nil
+	return b.LoadLogs(logFile)
 }
 
 type logRecord struct {
