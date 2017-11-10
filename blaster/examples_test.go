@@ -14,7 +14,7 @@ import (
 	"github.com/dave/blast/blaster"
 )
 
-func ExampleSimple() {
+func ExampleBlaster_Start_batchJob() {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := blaster.New(ctx, cancel)
 	defer b.Exit()
@@ -37,7 +37,7 @@ func ExampleSimple() {
 	// blaster.Summary{Success:2, Fail:0}
 }
 
-func ExampleLoadTest() {
+func ExampleBlaster_Start_loadTest() {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := blaster.New(ctx, cancel)
 	defer b.Exit()
