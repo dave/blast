@@ -177,11 +177,14 @@ func (b *Blaster) unmarshalConfig(c *Config) error {
 	if err := b.viper.UnmarshalKey("resume", &c.Resume); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("headers", &c.Headers); err != nil {
-		if s := b.viper.GetString("headers"); s != "" {
-			if err := json.Unmarshal([]byte(s), &c.Headers); err != nil {
-				return errors.WithStack(err)
-			}
+	if s := b.viper.GetString("headers"); s != "" {
+		// if array type data is actually a string, unmarshal it from json
+		if err := json.Unmarshal([]byte(s), &c.Headers); err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		if err := b.viper.UnmarshalKey("headers", &c.Headers); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 	if err := b.viper.UnmarshalKey("rate", &c.Rate); err != nil {
@@ -196,18 +199,24 @@ func (b *Blaster) unmarshalConfig(c *Config) error {
 	if err := b.viper.UnmarshalKey("worker-type", &c.WorkerType); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := b.viper.UnmarshalKey("log-data", &c.LogData); err != nil {
-		if s := b.viper.GetString("log-data"); s != "" {
-			if err := json.Unmarshal([]byte(s), &c.LogData); err != nil {
-				return errors.WithStack(err)
-			}
+	if s := b.viper.GetString("log-data"); s != "" {
+		// if array type data is actually a string, unmarshal it from json
+		if err := json.Unmarshal([]byte(s), &c.LogData); err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		if err := b.viper.UnmarshalKey("log-data", &c.LogData); err != nil {
+			return errors.WithStack(err)
 		}
 	}
-	if err := b.viper.UnmarshalKey("log-output", &c.LogOutput); err != nil {
-		if s := b.viper.GetString("log-output"); s != "" {
-			if err := json.Unmarshal([]byte(s), &c.LogOutput); err != nil {
-				return errors.WithStack(err)
-			}
+	if s := b.viper.GetString("log-output"); s != "" {
+		// if array type data is actually a string, unmarshal it from json
+		if err := json.Unmarshal([]byte(s), &c.LogOutput); err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		if err := b.viper.UnmarshalKey("log-output", &c.LogOutput); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 	if err := b.viper.UnmarshalKey("worker-template", &c.WorkerTemplate); err != nil {
@@ -224,18 +233,23 @@ func (b *Blaster) unmarshalConfig(c *Config) error {
 			}
 		}
 	}
-	if err := b.viper.UnmarshalKey("worker-variants", &c.WorkerVariants); err != nil {
-		if s := b.viper.GetString("worker-variants"); s != "" {
-			if err := json.Unmarshal([]byte(s), &c.WorkerVariants); err != nil {
-				return errors.WithStack(err)
-			}
+	if s := b.viper.GetString("worker-variants"); s != "" {
+		// if array type data is actually a string, unmarshal it from json
+		if err := json.Unmarshal([]byte(s), &c.WorkerVariants); err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		if err := b.viper.UnmarshalKey("worker-variants", &c.WorkerVariants); err != nil {
+			return errors.WithStack(err)
 		}
 	}
-	if err := b.viper.UnmarshalKey("payload-variants", &c.PayloadVariants); err != nil {
-		if s := b.viper.GetString("payload-variants"); s != "" {
-			if err := json.Unmarshal([]byte(s), &c.PayloadVariants); err != nil {
-				return errors.WithStack(err)
-			}
+	if s := b.viper.GetString("payload-variants"); s != "" {
+		if err := json.Unmarshal([]byte(s), &c.PayloadVariants); err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		if err := b.viper.UnmarshalKey("payload-variants", &c.PayloadVariants); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 	if err := b.viper.UnmarshalKey("quiet", &c.Quiet); err != nil {
