@@ -19,6 +19,100 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	b.Rate = 0 // set rate to 0 so we can inject items synthetically
+	b.itemFinishedChannel = make(chan struct{})
+
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewSuccess)
+
+	data := NewLoggingReadWriteCloser("a")
+	log := NewLoggingReadWriteCloser("")
+	output := NewLoggingReadWriteCloser("")
+
+	b.SetData(data)
+	b.SetLog(log)
+	b.SetOutput(output)
+
+	finished := make(chan struct{})
+	go func() {
+		must(t, b.start(ctx))
+		close(finished)
+	}()
+
+	// synthetically call the main channel, which is what the ticker would do
+	b.mainChannel <- 0
+	<-b.itemFinishedChannel
+
+	// start graceful exit process
+	close(b.dataFinishedChannel)
+
+	// wait for the start method to finish
+	<-finished
+
+	b.Exit()
+
+	data.mustRead(t)
+	log.mustWrite(t)
+	output.mustWrite(t)
+
+	data.mustClose(t)
+	log.mustClose(t)
+	output.mustClose(t)
+
+}
+
+func TestSetNil(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	b.Rate = 0 // set rate to 0 so we can inject items synthetically
+	b.itemFinishedChannel = make(chan struct{})
+
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewSuccess)
+
+	data := NewLoggingReadWriteCloser("a")
+	log := NewLoggingReadWriteCloser("")
+	output := NewLoggingReadWriteCloser("")
+
+	b.SetData(data)
+	b.SetLog(log)
+	b.SetOutput(output)
+
+	b.SetData(nil)
+	b.SetLog(nil)
+	b.SetOutput(nil)
+
+	finished := make(chan struct{})
+	go func() {
+		must(t, b.start(ctx))
+		close(finished)
+	}()
+
+	// synthetically call the main channel, which is what the ticker would do
+	b.mainChannel <- 0
+	<-b.itemFinishedChannel
+
+	// start graceful exit process
+	close(b.dataFinishedChannel)
+
+	// wait for the start method to finish
+	<-finished
+
+	b.Exit()
+
+	data.mustNotRead(t)
+	log.mustNotWrite(t)
+	output.mustNotWrite(t)
+
+	data.mustNotClose(t)
+	log.mustNotClose(t)
+	output.mustNotClose(t)
+
+}
+
 func TestSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -26,8 +120,8 @@ func TestSuccess(t *testing.T) {
 	b.Rate = 0 // set rate to 0 so we can inject items synthetically
 	b.itemFinishedChannel = make(chan struct{})
 
-	workerLog := new(LoggingWorker)
-	b.SetWorker(workerLog.NewSuccess)
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewSuccess)
 
 	finished := make(chan struct{})
 	go func() {
@@ -50,9 +144,9 @@ func TestSuccess(t *testing.T) {
 
 	b.Exit()
 
-	workerLog.mustLen(t, 2)
-	workerLog.must(t, 0, map[string]string{"_success": "true"})
-	workerLog.must(t, 1, map[string]string{"_success": "true"})
+	worker.mustLen(t, 2)
+	worker.must(t, 0, map[string]string{"_success": "true"})
+	worker.must(t, 1, map[string]string{"_success": "true"})
 
 }
 
@@ -566,4 +660,69 @@ func (b *ThreadSafeBuffer) String() string {
 	b.m.Lock()
 	defer b.m.Unlock()
 	return b.b.String()
+}
+
+func NewLoggingReadWriteCloser(data string) *LoggingReadWriteCloser {
+	return &LoggingReadWriteCloser{
+		Buf: bytes.NewBufferString(data),
+	}
+}
+
+type LoggingReadWriteCloser struct {
+	Buf      *bytes.Buffer
+	DidRead  bool
+	DidWrite bool
+	DidClose bool
+}
+
+func (l *LoggingReadWriteCloser) Read(p []byte) (n int, err error) {
+	l.DidRead = true
+	return l.Buf.Read(p)
+}
+
+func (l *LoggingReadWriteCloser) Write(p []byte) (n int, err error) {
+	l.DidWrite = true
+	return l.Buf.Write(p)
+}
+
+func (l *LoggingReadWriteCloser) Close() error {
+	l.DidClose = true
+	return nil
+}
+
+func (l *LoggingReadWriteCloser) mustClose(t *testing.T) {
+	t.Helper()
+	if !l.DidClose {
+		t.Fatal("Did not close")
+	}
+}
+func (l *LoggingReadWriteCloser) mustRead(t *testing.T) {
+	t.Helper()
+	if !l.DidRead {
+		t.Fatal("Did not read")
+	}
+}
+func (l *LoggingReadWriteCloser) mustWrite(t *testing.T) {
+	t.Helper()
+	if !l.DidWrite {
+		t.Fatal("Did not write")
+	}
+}
+func (l *LoggingReadWriteCloser) mustNotClose(t *testing.T) {
+	t.Helper()
+	if l.DidClose {
+		t.Fatal("Did close")
+	}
+}
+func (l *LoggingReadWriteCloser) mustNotRead(t *testing.T) {
+	t.Helper()
+	if l.DidRead {
+		t.Fatal("Did read")
+	}
+}
+func (l *LoggingReadWriteCloser) mustNotWrite(t *testing.T) {
+	t.Helper()
+	if l.DidWrite {
+		t.Fatal("Did write")
+	}
 }
