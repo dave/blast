@@ -20,8 +20,55 @@ import (
 
 	"io/ioutil"
 
+	"github.com/leemcloughlin/gofarmhash"
 	"github.com/pkg/errors"
 )
+
+func TestInitialiseLog(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	b := New(ctx, cancel)
+	must(t, b.initialiseLog(""))
+
+	content := "hash,result,a,b\n1|2,false,3,4\n5|6,true,7,8"
+
+	f, _ := ioutil.TempFile("", "")
+	f.WriteString(content)
+	f.Close()
+
+	b = New(ctx, cancel)
+	b.Resume = false
+	must(t, b.initialiseLog(f.Name()))
+	if len(b.skip) != 0 {
+		t.Fatal("Should be zero skips with resume = false")
+	}
+
+	b.Exit()
+
+	// log file should now be empty
+	after, _ := ioutil.ReadFile(f.Name())
+	if string(after) != "hash,result\n" {
+		t.Fatal("Not expected, got:", string(after))
+	}
+
+	f, _ = ioutil.TempFile("", "")
+	f.WriteString(content)
+	f.Close()
+
+	b = New(ctx, cancel)
+	b.Resume = true
+	must(t, b.initialiseLog(f.Name()))
+	if !reflect.DeepEqual(b.skip, map[farmhash.Uint128]struct{}{farmhash.Uint128{5, 6}: {}}) {
+		t.Fatal("Enexpected contents in skip:", b.skip)
+	}
+
+	// log file should now be appended with a \n
+	after, _ = ioutil.ReadFile(f.Name())
+	if string(after) != content+"\n" {
+		t.Fatal("Not expected, got:", string(after))
+	}
+
+}
 
 func TestLoadEmptyLogs(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
