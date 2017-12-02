@@ -175,6 +175,7 @@ func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 	go func() {
 		select {
 		case <-b.signalChannel:
+			// notest
 			b.cancel()
 		case <-ctx.Done():
 		}
@@ -209,6 +210,8 @@ type Summary struct {
 
 // Command processes command line flags, loads the config and starts the blast run.
 func (b *Blaster) Command(ctx context.Context) error {
+
+	// notest
 
 	c, err := b.LoadConfig()
 	if err != nil {
