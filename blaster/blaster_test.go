@@ -16,8 +16,66 @@ import (
 
 	"strings"
 
+	"reflect"
+
+	"io/ioutil"
+
 	"github.com/pkg/errors"
 )
+
+func TestOpenData(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	b := New(ctx, cancel)
+
+	must(t, b.openData(ctx, "", false))
+
+	must(t, b.openData(ctx, "a,b\n1,2", false))
+	if len(b.Headers) != 0 {
+		t.Fatal("Incorrect headers, got:", b.Headers)
+	}
+
+	b = New(ctx, cancel)
+	must(t, b.openData(ctx, "a,b\n1,2", true))
+	if !reflect.DeepEqual(b.Headers, []string{"a", "b"}) {
+		t.Fatal("Incorrect headers, got:", b.Headers)
+	}
+	r, err := b.dataReader.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(r, []string{"1", "2"}) {
+		t.Fatal("Incorrect data, got:", r)
+	}
+
+	f, _ := ioutil.TempFile("", "")
+	f.WriteString("a,b,c\n1,2,3")
+	f.Close()
+
+	b = New(ctx, cancel)
+	must(t, b.openData(ctx, f.Name(), true))
+	if !reflect.DeepEqual(b.Headers, []string{"a", "b", "c"}) {
+		t.Fatal("Incorrect headers, got:", b.Headers)
+	}
+	r, err = b.dataReader.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(r, []string{"1", "2", "3"}) {
+		t.Fatal("Incorrect data, got:", r)
+	}
+}
+
+func TestReadHeaders(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	data := NewLoggingReadWriteCloser("a,b,c\n1,2,3\n4,5,6")
+	b.SetData(data)
+	must(t, b.ReadHeaders())
+	if !reflect.DeepEqual(b.Headers, []string{"a", "b", "c"}) {
+		t.Fatal("Incorrect headers, got:", b.Headers)
+	}
+}
 
 func TestExit(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

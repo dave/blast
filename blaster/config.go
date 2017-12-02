@@ -72,6 +72,8 @@ type Config struct {
 // LoadConfig parses command line flags and loads a config file from disk. A Config is returned which may be used with the Initialise method to complete configuration.
 func (b *Blaster) LoadConfig() (Config, error) {
 
+	// notest
+
 	c := Config{}
 
 	dryRunFlag, configFlag := b.setupFlags()
@@ -94,6 +96,9 @@ func (b *Blaster) LoadConfig() (Config, error) {
 }
 
 func (b *Blaster) setupFlags() (dryRunFlag bool, configFlag string) {
+
+	// notest
+
 	dryRunFlagRaw := pflag.Bool("dry", false, "`` If true, just prints the current config and exits.")
 	configFlagRaw := pflag.String("config", "", "`` The config file to load.")
 
@@ -125,6 +130,8 @@ func (b *Blaster) setupFlags() (dryRunFlag bool, configFlag string) {
 }
 
 func (b *Blaster) setupViper(configFlag string) error {
+
+	// notest
 
 	if configFlag != "" {
 		b.viper.SetConfigFile(configFlag)
@@ -307,12 +314,14 @@ func (b *Blaster) Initialise(ctx context.Context, c Config) error {
 	}
 
 	if c.Data != "" {
+		// notest
 		if err := b.openData(ctx, c.Data, len(c.Headers) == 0); err != nil {
 			return err
 		}
 	}
 
 	if c.Log != "" {
+		// notest
 		if err := b.initialiseLog(c.Log); err != nil {
 			return err
 		}
