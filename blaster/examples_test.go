@@ -32,9 +32,11 @@ func ExampleBlaster_Start_batchJob() {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Printf("%#v", summary)
+	fmt.Printf("Success == 2: %v\n", summary.Success == 2)
+	fmt.Printf("Fail == 0: %v", summary.Fail == 0)
 	// Output:
-	// blaster.Summary{Success:2, Fail:0}
+	// Success == 2: true
+	// Fail == 0: true
 }
 
 func ExampleBlaster_Start_loadTest() {
@@ -48,7 +50,7 @@ func ExampleBlaster_Start_loadTest() {
 			},
 		}
 	})
-	b.Rate = 100
+	b.Rate = 1000
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -57,12 +59,14 @@ func ExampleBlaster_Start_loadTest() {
 			fmt.Println(err.Error())
 			return
 		}
-		fmt.Printf("Fail: %d", summary.Fail)
+		fmt.Printf("Success > 10: %v\n", summary.Success > 10)
+		fmt.Printf("Fail == 0: %v", summary.Fail == 0)
 		wg.Done()
 	}()
 	<-time.After(time.Millisecond * 100)
 	b.Exit()
 	wg.Wait()
 	// Output:
-	// Fail: 0
+	// Success > 10: true
+	// Fail == 0: true
 }

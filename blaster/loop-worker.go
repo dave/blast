@@ -65,6 +65,10 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 						b.error(err)
 						return
 					}
+					if b.itemFinishedChannel != nil {
+						// only used in tests
+						b.itemFinishedChannel <- struct{}{}
+					}
 				}
 			}
 		}(i)
@@ -73,10 +77,8 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 
 func (b *Blaster) send(ctx context.Context, w Worker, work workDef) error {
 
-	currentSegment := b.metrics.currentSegment()
-	b.metrics.logStart(currentSegment)
-
-	b.metrics.logBusy(currentSegment)
+	b.metrics.logStart(work.segment)
+	b.metrics.logBusy(work.segment)
 	b.metrics.busy.Inc(1)
 	defer b.metrics.busy.Dec(1)
 
@@ -141,7 +143,7 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) error {
 	if val == "" {
 		val = "(none)"
 	}
-	b.metrics.logFinish(currentSegment, val, time.Since(start), success)
+	b.metrics.logFinish(work.segment, val, time.Since(start), success)
 
 	if b.logWriter != nil {
 		var fields []string

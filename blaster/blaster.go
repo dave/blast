@@ -69,12 +69,13 @@ type Blaster struct {
 	payloadRenderer renderer
 	workerRenderer  renderer
 
-	mainChannel            chan struct{}
+	mainChannel            chan int
 	errorChannel           chan error
 	workerChannel          chan workDef
 	logChannel             chan logRecord
 	dataFinishedChannel    chan struct{}
 	workersFinishedChannel chan struct{}
+	itemFinishedChannel    chan struct{}
 	changeRateChannel      chan float64
 	signalChannel          chan os.Signal
 
@@ -157,7 +158,7 @@ func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 		changeRateChannel:      make(chan float64, 1),
 		errorChannel:           make(chan error),
 		logChannel:             make(chan logRecord),
-		mainChannel:            make(chan struct{}),
+		mainChannel:            make(chan int),
 		workerChannel:          make(chan workDef),
 		Rate:                   10,
 		Workers:                10,
@@ -252,8 +253,8 @@ func (b *Blaster) Start(ctx context.Context) (Summary, error) {
 		panic("Must specify workers!")
 	}
 
-	if b.Rate <= 0 {
-		panic("Must specify rate!")
+	if b.Rate < 0 {
+		panic("Rate must not be negative!")
 	}
 
 	err := b.start(ctx)
