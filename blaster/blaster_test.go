@@ -23,6 +23,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestLoadEmptyLogs(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	must(t, b.LoadLogs(&bytes.Buffer{}))
+}
+
 func TestWriteHeaders(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := New(ctx, cancel)
