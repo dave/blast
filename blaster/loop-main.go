@@ -21,7 +21,10 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				return
-			case <-b.mainChannel:
+			case <-b.dataFinishedChannel:
+				// If dataFinishedChannel is closed externally (e.g. in tests), we should return.
+				return
+			case segment := <-b.mainChannel:
 				for {
 					var record []string
 					if b.dataReader != nil {
@@ -76,7 +79,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 
 						skipped = false
 
-						b.workerChannel <- workDef{data: data, hash: hash}
+						b.workerChannel <- workDef{data: data, hash: hash, segment: segment}
 					}
 					if skipped {
 						// if we've skipped all variants, continue with the next item immediately
@@ -90,6 +93,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 }
 
 type workDef struct {
-	data map[string]string
-	hash farmhash.Uint128
+	segment int
+	data    map[string]string
+	hash    farmhash.Uint128
 }

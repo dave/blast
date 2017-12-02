@@ -39,11 +39,11 @@ func newMetricsDef(b *Blaster) *metricsDef {
 	return m
 }
 
-func (m *metricsDef) logMiss() {
+func (m *metricsDef) logMiss(segment int) {
 	m.sync.RLock()
 	defer m.sync.RUnlock()
 	m.all.missed.Inc(1)
-	m.segments[m.current].missed.Inc(1)
+	m.segments[segment].missed.Inc(1)
 }
 
 func (m *metricsDef) logBusy(segment int) {

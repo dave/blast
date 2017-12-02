@@ -261,9 +261,7 @@ func (b *Blaster) unmarshalConfig(c *Config) error {
 // Initialise configures the Blaster with config options in a provided Config
 func (b *Blaster) Initialise(ctx context.Context, c Config) error {
 
-	if c.Rate != 0 {
-		b.Rate = c.Rate
-	}
+	b.Rate = c.Rate
 	if c.Workers != 0 {
 		b.Workers = c.Workers
 	}
