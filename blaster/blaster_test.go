@@ -23,6 +23,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestWriteHeaders(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	log := NewLoggingReadWriteCloser("")
+	b.SetLog(log)
+	b.LogData = []string{"a", "b"}
+	b.LogOutput = []string{"c", "d"}
+	must(t, b.WriteLogHeaders())
+	b.Exit()
+	log.mustWrite(t)
+	log.mustClose(t)
+	if log.Buf.String() != "hash,result,a,b,c,d\n" {
+		t.Fatalf("Log headers not correct. Got: %s", log.Buf.String())
+	}
+}
+
 func TestOpenData(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
