@@ -87,6 +87,7 @@ type Blaster struct {
 	errorsIgnored uint64
 	metrics       *metricsDef
 	err           error
+	gcsOpener     opener
 }
 
 // SetTimeout sets the timeout. See Config.Timeout for more details.
@@ -166,6 +167,7 @@ func New(ctx context.Context, cancel context.CancelFunc) *Blaster {
 		hardTimeout:            time.Second * 2,
 		WorkerVariants:         []map[string]string{{}},
 		PayloadVariants:        []map[string]string{{}},
+		gcsOpener:              googleCloudOpener{},
 	}
 	b.metrics = newMetricsDef(b)
 

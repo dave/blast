@@ -51,11 +51,7 @@ func (b *Blaster) openData(ctx context.Context, value string, headers bool) erro
 		name := strings.TrimPrefix(value, "gs://")
 		bucket := name[:strings.Index(name, "/")]
 		handle := name[strings.Index(name, "/")+1:]
-		client, err := storage.NewClient(ctx)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		gr, err := client.Bucket(bucket).Object(handle).NewReader(ctx)
+		gr, err := b.gcsOpener.open(ctx, bucket, handle)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -77,4 +73,23 @@ func (b *Blaster) openData(ctx context.Context, value string, headers bool) erro
 	}
 	return nil
 
+}
+
+type opener interface {
+	open(context.Context, string, string) (io.Reader, error)
+}
+
+type googleCloudOpener struct{}
+
+func (googleCloudOpener) open(ctx context.Context, bucket, handle string) (io.Reader, error) {
+	// notest
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	gr, err := client.Bucket(bucket).Object(handle).NewReader(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return gr, nil
 }
