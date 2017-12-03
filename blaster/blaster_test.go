@@ -24,6 +24,41 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	b.Rate = 0 // set rate to 0 so we can inject items synthetically
+	b.itemFinishedChannel = make(chan struct{})
+
+	out := new(ThreadSafeBuffer)
+	b.SetOutput(out)
+
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewSuccess)
+
+	finished := make(chan error, 1)
+	go func() {
+		finished <- b.start(ctx)
+	}()
+
+	// synthetically call the main channel, which is what the ticker would do
+	b.mainChannel <- 0
+	<-b.itemFinishedChannel
+
+	b.error(errors.New("a"))
+	b.error(errors.New("b"))
+
+	// wait for the start method to finish
+	err := <-finished
+	if err == nil || err.Error() != "a" {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	mustMatch(t, out, 1, "Fatal error: a")
+	mustMatch(t, out, 1, "1 errors were ignored because we were already exiting with an error")
+
+}
+
 func TestInitialiseLog(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -163,10 +198,9 @@ func TestExit(t *testing.T) {
 	b.SetLog(log)
 	b.SetOutput(output)
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -177,7 +211,7 @@ func TestExit(t *testing.T) {
 	close(b.dataFinishedChannel)
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -212,10 +246,9 @@ func TestSetNil(t *testing.T) {
 	b.SetLog(nil)
 	b.SetOutput(nil)
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -226,7 +259,7 @@ func TestSetNil(t *testing.T) {
 	close(b.dataFinishedChannel)
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -250,10 +283,9 @@ func TestSuccess(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewSuccess)
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -267,7 +299,7 @@ func TestSuccess(t *testing.T) {
 	close(b.dataFinishedChannel)
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -287,10 +319,9 @@ func TestFail(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewFail)
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -304,7 +335,7 @@ func TestFail(t *testing.T) {
 	close(b.dataFinishedChannel)
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -325,10 +356,9 @@ func TestHung(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewHang(100))
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -339,7 +369,7 @@ func TestHung(t *testing.T) {
 	close(b.dataFinishedChannel)
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -359,10 +389,9 @@ func TestTimeout(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewHang(500))
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -373,7 +402,7 @@ func TestTimeout(t *testing.T) {
 	close(b.dataFinishedChannel)
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -392,10 +421,9 @@ func TestCancel(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewHang(400))
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -404,7 +432,7 @@ func TestCancel(t *testing.T) {
 	b.Exit()
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	worker.mustLen(t, 1)
 	worker.must(t, 0, map[string]string{"_cancelled": "true"})
@@ -430,10 +458,9 @@ func TestLog(t *testing.T) {
 	b.Headers = []string{"head"}
 	b.SetData(strings.NewReader("a\nb"))
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// synthetically call the main channel, which is what the ticker would do
@@ -447,7 +474,7 @@ func TestLog(t *testing.T) {
 	b.mainChannel <- 0
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -486,10 +513,9 @@ func TestResume(t *testing.T) {
 	// In this log fragment, second item failed on first run so will retry:
 	must(t, b.LoadLogs(bytes.NewBufferString("hash,result\n45583464115695f2|e60a15c85c691ab8,true\n6258a554f446f0a7|4111d6d36a631a68,false")))
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// this will skip the first item and complete the second item
@@ -504,7 +530,7 @@ func TestResume(t *testing.T) {
 	b.mainChannel <- 0
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 
@@ -540,10 +566,9 @@ func TestPayloadVariants(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewSuccess)
 
-	finished := make(chan struct{})
+	finished := make(chan error, 1)
 	go func() {
-		must(t, b.start(ctx))
-		close(finished)
+		finished <- b.start(ctx)
 	}()
 
 	// each signal on the main channel will complete all the payload variants of an item, but
@@ -560,7 +585,7 @@ func TestPayloadVariants(t *testing.T) {
 	b.mainChannel <- 0
 
 	// wait for the start method to finish
-	<-finished
+	must(t, <-finished)
 
 	b.Exit()
 

@@ -12,7 +12,7 @@ func TestOpenGcs(t *testing.T) {
 	b := New(ctx, cancel)
 
 	opener := &loggingOpener{}
-	b.gcsOpener = opener
+	b.gcs = opener
 
 	must(t, b.openData(ctx, "gs://a/b", false))
 
