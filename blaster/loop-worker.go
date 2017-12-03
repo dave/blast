@@ -208,16 +208,17 @@ func stringify(v interface{}) string {
 
 // ExampleWorker facilitates code examples by satisfying the Worker, Starter and Stopper interfaces with provided functions.
 type ExampleWorker struct {
-	SendFunc  func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error)
-	StartFunc func(ctx context.Context, payload map[string]interface{}) error
-	StopFunc  func(ctx context.Context, payload map[string]interface{}) error
+	SendFunc  func(ctx context.Context, self *ExampleWorker, in map[string]interface{}) (map[string]interface{}, error)
+	StartFunc func(ctx context.Context, self *ExampleWorker, payload map[string]interface{}) error
+	StopFunc  func(ctx context.Context, self *ExampleWorker, payload map[string]interface{}) error
+	Local     map[string]interface{}
 }
 
 // Send satisfies the Worker interface.
 func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 	// notest
 	if e.SendFunc != nil {
-		return e.SendFunc(ctx, in)
+		return e.SendFunc(ctx, e, in)
 	}
 	return nil, nil
 }
@@ -226,7 +227,7 @@ func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (ma
 func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{}) error {
 	// notest
 	if e.StartFunc != nil {
-		return e.StartFunc(ctx, payload)
+		return e.StartFunc(ctx, e, payload)
 	}
 	return nil
 }
@@ -235,7 +236,7 @@ func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{
 func (e *ExampleWorker) Stop(ctx context.Context, payload map[string]interface{}) error {
 	// notest
 	if e.StopFunc != nil {
-		return e.StopFunc(ctx, payload)
+		return e.StopFunc(ctx, e, payload)
 	}
 	return nil
 }

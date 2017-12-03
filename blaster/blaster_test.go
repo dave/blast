@@ -764,26 +764,13 @@ func (l *LoggingWriter) Debug() {
 
 func (l *LoggingWriter) mustLen(t *testing.T, expected int) {
 	t.Helper()
-	var log [][]string
-	reader := csv.NewReader(bytes.NewBuffer(l.buf.Bytes()))
-	for {
-		r, err := reader.Read()
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				fmt.Println(err.Error())
-			}
-		}
-		log = append(log, r)
-	}
+	log := l.All()
 	if expected != len(log) {
 		t.Fatalf("Log is not length %d:\n%v", expected, log)
 	}
 }
 
-func (l *LoggingWriter) must(t *testing.T, index int, expected []string) {
-	t.Helper()
+func (l *LoggingWriter) All() [][]string {
 	var log [][]string
 	reader := csv.NewReader(bytes.NewBuffer(l.buf.Bytes()))
 	for {
@@ -797,7 +784,12 @@ func (l *LoggingWriter) must(t *testing.T, index int, expected []string) {
 		}
 		log = append(log, r)
 	}
+	return log
+}
 
+func (l *LoggingWriter) must(t *testing.T, index int, expected []string) {
+	t.Helper()
+	log := l.All()
 	record := log[index]
 	if len(record) == len(expected) {
 		found := true
