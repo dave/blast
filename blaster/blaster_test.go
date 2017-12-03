@@ -24,6 +24,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestOpenLogNotExist(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+
+	// file doesn't exist
+	must(t, b.openAndLoadLogs("./cvxyoicvyuohwerlmbxviuhsdiouh"))
+
+	// exists but zero length
+	f, _ := ioutil.TempFile("", "")
+	must(t, b.openAndLoadLogs(f.Name()))
+}
+
 func TestError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := New(ctx, cancel)

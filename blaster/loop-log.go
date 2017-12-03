@@ -26,6 +26,7 @@ func (b *Blaster) startLogLoop(ctx context.Context) {
 			case lr := <-b.logChannel:
 				b.logWriter.Write(lr.toCsv())
 				if count%1000 == 0 {
+					// notest
 					b.logWriter.Flush()
 				}
 			}
