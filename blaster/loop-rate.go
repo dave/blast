@@ -28,6 +28,7 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 				if err == io.EOF {
 					return
 				}
+				// notest
 				b.error(errors.WithStack(err))
 				return
 			}
@@ -48,11 +49,13 @@ func (b *Blaster) startRateLoop(ctx context.Context) {
 			case s := <-readString():
 				s = strings.TrimSpace(s)
 				if s == "" {
+					// notest
 					b.printStatus(false)
 					continue
 				}
 				f, err := strconv.ParseFloat(s, 64)
 				if err != nil {
+					// notest
 					b.error(errors.WithStack(err))
 					return
 				}
