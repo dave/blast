@@ -524,6 +524,9 @@ func TestLog(t *testing.T) {
 	worker := new(LoggingWorker)
 	b.SetWorker(worker.NewSuccess)
 
+	input := &bytes.Buffer{}
+	b.SetInput(input)
+
 	log := &LoggingWriter{buf: new(bytes.Buffer)}
 	b.SetLog(log)
 
