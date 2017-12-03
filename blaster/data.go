@@ -51,7 +51,7 @@ func (b *Blaster) openData(ctx context.Context, value string, headers bool) erro
 		name := strings.TrimPrefix(value, "gs://")
 		bucket := name[:strings.Index(name, "/")]
 		handle := name[strings.Index(name, "/")+1:]
-		gr, err := b.gcsOpener.open(ctx, bucket, handle)
+		gr, err := b.gcs.open(ctx, bucket, handle)
 		if err != nil {
 			return errors.WithStack(err)
 		}
