@@ -20,7 +20,7 @@ func ExampleBlaster_Start_batchJob() {
 	defer b.Exit()
 	b.SetWorker(func() blaster.Worker {
 		return &blaster.ExampleWorker{
-			SendFunc: func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+			SendFunc: func(ctx context.Context, self *blaster.ExampleWorker, in map[string]interface{}) (map[string]interface{}, error) {
 				return map[string]interface{}{"status": 200}, nil
 			},
 		}
@@ -45,7 +45,7 @@ func ExampleBlaster_Start_loadTest() {
 	defer b.Exit()
 	b.SetWorker(func() blaster.Worker {
 		return &blaster.ExampleWorker{
-			SendFunc: func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+			SendFunc: func(ctx context.Context, self *blaster.ExampleWorker, in map[string]interface{}) (map[string]interface{}, error) {
 				return map[string]interface{}{"status": 200}, nil
 			},
 		}
