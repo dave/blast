@@ -65,12 +65,14 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 			case b.mainChannel <- segment:
 				// if main loop is waiting, send it a message
 			case <-ctx.Done():
+				// notest
 				return
 			case <-b.dataFinishedChannel:
+				// notest
 				return
 			default:
+				// notest
 				// if main loop is busy, skip this tick
-				b.metrics.logMiss(segment)
 			}
 		}
 	}()

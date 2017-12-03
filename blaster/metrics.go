@@ -39,13 +39,6 @@ func newMetricsDef(b *Blaster) *metricsDef {
 	return m
 }
 
-func (m *metricsDef) logMiss(segment int) {
-	m.sync.RLock()
-	defer m.sync.RUnlock()
-	m.all.missed.Inc(1)
-	m.segments[segment].missed.Inc(1)
-}
-
 func (m *metricsDef) logBusy(segment int) {
 	m.sync.RLock()
 	defer m.sync.RUnlock()
@@ -102,7 +95,6 @@ func (m *metricsDef) newMetricsSegment(rate float64) *metricsSegment {
 		rate:   rate,
 		total:  m.newMetricsItem(),
 		status: map[string]*metricsItem{},
-		missed: metrics.NewRegisteredCounter("missed", m.registry),
 		busy:   metrics.NewRegisteredHistogram("busy", m.registry, metrics.NewExpDecaySample(1028, 0.015)),
 		start:  time.Now(),
 	}
@@ -112,7 +104,6 @@ type metricsSegment struct {
 	sync   sync.RWMutex
 	def    *metricsDef
 	rate   float64
-	missed metrics.Counter
 	busy   metrics.Histogram
 	total  *metricsItem
 	status map[string]*metricsItem
