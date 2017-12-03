@@ -445,6 +445,35 @@ func TestHardTimeout(t *testing.T) {
 
 }
 
+func TestHardTimeoutCancel(t *testing.T) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	b.Rate = 0 // set rate to 0 so we can inject items synthetically
+	b.softTimeout = 10 * time.Millisecond
+	b.hardTimeout = 20 * time.Millisecond
+
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewHangForever)
+
+	finished := make(chan error, 1)
+	go func() {
+		finished <- b.start(ctx)
+	}()
+
+	// synthetically call the main channel, which is what the ticker would do
+	b.mainChannel <- 0
+
+	b.Exit()
+
+	// wait for the start method to finish
+	err := <-finished
+	if err.Error() != "a worker was still sending after timeout + 1 second. This indicates a bug in the worker code. Workers should immediately exit on receiving a signal from ctx.Done()" {
+		t.Fatal("Unexpected error:", err)
+	}
+
+}
+
 func TestCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
