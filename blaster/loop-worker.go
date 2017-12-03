@@ -215,6 +215,7 @@ type ExampleWorker struct {
 
 // Send satisfies the Worker interface.
 func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+	// notest
 	if e.SendFunc != nil {
 		return e.SendFunc(ctx, in)
 	}
@@ -223,6 +224,7 @@ func (e *ExampleWorker) Send(ctx context.Context, in map[string]interface{}) (ma
 
 // Start satisfies the Starter interface.
 func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{}) error {
+	// notest
 	if e.StartFunc != nil {
 		return e.StartFunc(ctx, payload)
 	}
@@ -231,6 +233,7 @@ func (e *ExampleWorker) Start(ctx context.Context, payload map[string]interface{
 
 // Stop satisfies the Stopper interface.
 func (e *ExampleWorker) Stop(ctx context.Context, payload map[string]interface{}) error {
+	// notest
 	if e.StopFunc != nil {
 		return e.StopFunc(ctx, payload)
 	}
