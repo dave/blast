@@ -27,10 +27,12 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 		if s, ok := w.(Starter); ok {
 			workerSetup, err := renderMap(b.workerRenderer, workerVariantData)
 			if err != nil {
+				// notest
 				b.error(err)
 				return
 			}
 			if err := s.Start(ctx, workerSetup); err != nil {
+				// notest
 				b.error(errors.WithStack(err))
 				return
 			}
@@ -43,10 +45,12 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 				if s, ok := w.(Stopper); ok {
 					workerSetup, err := renderMap(b.workerRenderer, workerVariantData)
 					if err != nil {
+						// notest
 						b.error(err)
 						return
 					}
 					if err := s.Stop(ctx, workerSetup); err != nil {
+						// notest
 						b.error(errors.WithStack(err))
 						return
 					}
@@ -62,6 +66,7 @@ func (b *Blaster) startWorkers(ctx context.Context) {
 					return
 				case work := <-b.workerChannel:
 					if err := b.send(ctx, w, work); err != nil {
+						// notest
 						b.error(err)
 						return
 					}

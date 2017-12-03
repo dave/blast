@@ -29,6 +29,7 @@ func (b *Blaster) startStatusLoop(ctx context.Context) {
 				ticker.Stop()
 				return
 			case <-ticker.C:
+				// notest
 				b.printStatus(false)
 			}
 		}
@@ -68,13 +69,6 @@ Rate?
 `,
 		b.Rate,
 	)
-}
-
-func (b *Blaster) print(a ...interface{}) {
-	if b.Quiet || b.outWriter == nil {
-		return
-	}
-	fmt.Fprint(b.outWriter, a...)
 }
 
 func (b *Blaster) println(a ...interface{}) {
