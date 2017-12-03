@@ -67,3 +67,10 @@ func TestDataLog(t *testing.T) {
 	log.must(t, 1, []string{"e049f1ccadc8a57d|c017a12dd7fee7fb", "true", "a2", "c2", "d2", "f2"})
 
 }
+
+func TestStringify(t *testing.T) {
+	s := stringify([]string{"a", "b"})
+	if s != `["a","b"]` {
+		t.Fatal("Unexpected:", s)
+	}
+}
