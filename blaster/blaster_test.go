@@ -24,6 +24,50 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestPrintStatus(t *testing.T) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	b.Rate = 0 // set rate to 0 so we can inject items synthetically
+	b.itemFinishedChannel = make(chan struct{})
+
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewSuccess)
+
+	input := &bytes.Buffer{}
+	b.SetInput(input)
+
+	out := new(ThreadSafeBuffer)
+	b.SetOutput(out)
+
+	b.Headers = []string{"head"}
+	b.SetData(strings.NewReader("a"))
+
+	finished := make(chan error, 1)
+	go func() {
+		finished <- b.start(ctx)
+	}()
+
+	// synthetically call the main channel, which is what the ticker would do
+	b.mainChannel <- 0
+	<-b.itemFinishedChannel
+
+	b.printStatus(false)
+
+	// another tick and the data will reach EOF, and gracefully exit
+	b.mainChannel <- 0
+
+	// wait for the start method to finish
+	must(t, <-finished)
+
+	b.Exit()
+
+	// metrics and rate prompt will print twice
+	mustMatch(t, out, 2, `Metrics\n=======\n`)
+	mustMatch(t, out, 2, `Current rate is 0 requests / second. Enter a new rate or press enter to view status.\n\nRate?`)
+
+}
+
 func TestOpenLogNotExist(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := New(ctx, cancel)
