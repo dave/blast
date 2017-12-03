@@ -37,6 +37,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 								close(b.dataFinishedChannel)
 								return
 							}
+							// notest
 							b.error(errors.WithStack(err))
 							return
 						}
@@ -62,6 +63,7 @@ func (b *Blaster) startMainLoop(ctx context.Context) {
 							// Calculate the hash of the incoming data
 							j, err := json.Marshal(data)
 							if err != nil {
+								// notest
 								b.error(errors.WithStack(err))
 								return
 							}
