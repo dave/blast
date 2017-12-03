@@ -411,6 +411,40 @@ func TestTimeout(t *testing.T) {
 
 }
 
+func TestHardTimeout(t *testing.T) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	b := New(ctx, cancel)
+	b.Rate = 0 // set rate to 0 so we can inject items synthetically
+	b.softTimeout = 5 * time.Millisecond
+	b.hardTimeout = 10 * time.Millisecond
+	b.itemFinishedChannel = make(chan struct{})
+
+	worker := new(LoggingWorker)
+	b.SetWorker(worker.NewHangForever)
+
+	finished := make(chan error, 1)
+	go func() {
+		finished <- b.start(ctx)
+	}()
+
+	// synthetically call the main channel, which is what the ticker would do
+	b.mainChannel <- 0
+	<-b.itemFinishedChannel
+
+	// start graceful exit process
+	close(b.dataFinishedChannel)
+
+	// wait for the start method to finish
+	err := <-finished
+	if err.Error() != "a worker was still sending after timeout + 1 second. This indicates a bug in the worker code. Workers should immediately exit on receiving a signal from ctx.Done()" {
+		t.Fatal("Unexpected error:", err)
+	}
+
+	b.Exit()
+
+}
+
 func TestCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -748,9 +782,10 @@ func (l *LoggingWorker) Append(message map[string]string) {
 }
 
 type loggingWorker struct {
-	Result bool
-	Hang   int
-	Log    *LoggingWorker
+	Result      bool
+	Hang        int
+	Log         *LoggingWorker
+	HangForever bool
 }
 
 func (l *LoggingWorker) NewSuccess() Worker {
@@ -765,9 +800,15 @@ func (l *LoggingWorker) NewHang(duration int) func() Worker {
 	return func() Worker { return &loggingWorker{Log: l, Result: true, Hang: duration} }
 }
 
+func (l *LoggingWorker) NewHangForever() Worker {
+	return &loggingWorker{Log: l, HangForever: true}
+}
+
 func (l *loggingWorker) Send(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 	log := map[string]string{}
-	if l.Hang > 0 {
+	if l.HangForever {
+		<-time.After(100 * time.Second)
+	} else if l.Hang > 0 {
 		select {
 		case <-time.After(time.Duration(l.Hang) * time.Millisecond):
 			log["_hung"] = "true"
