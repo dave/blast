@@ -127,10 +127,6 @@ func (b *Blaster) openAndLoadLogs(log string) error {
 		return nil
 	}
 
-	if fs.Size() > 1<<20 {
-		b.printf("Logs are %v MB, loading can take some time...\n", fs.Size()/(1<<20))
-	}
-
 	return b.LoadLogs(logFile)
 }
 
