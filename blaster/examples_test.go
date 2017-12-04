@@ -27,13 +27,13 @@ func ExampleBlaster_Start_batchJob() {
 	})
 	b.Headers = []string{"header"}
 	b.SetData(strings.NewReader("foo\nbar"))
-	summary, err := b.Start(ctx)
+	stats, err := b.Start(ctx)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Printf("Success == 2: %v\n", summary.Success == 2)
-	fmt.Printf("Fail == 0: %v", summary.Fail == 0)
+	fmt.Printf("Success == 2: %v\n", stats.All.Summary.Success == 2)
+	fmt.Printf("Fail == 0: %v", stats.All.Summary.Fail == 0)
 	// Output:
 	// Success == 2: true
 	// Fail == 0: true
@@ -54,13 +54,13 @@ func ExampleBlaster_Start_loadTest() {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		summary, err := b.Start(ctx)
+		stats, err := b.Start(ctx)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		fmt.Printf("Success > 10: %v\n", summary.Success > 10)
-		fmt.Printf("Fail == 0: %v", summary.Fail == 0)
+		fmt.Printf("Success > 10: %v\n", stats.All.Summary.Success > 10)
+		fmt.Printf("Fail == 0: %v", stats.All.Summary.Fail == 0)
 		wg.Done()
 	}()
 	<-time.After(time.Millisecond * 100)
