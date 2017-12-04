@@ -608,7 +608,10 @@ func TestLog(t *testing.T) {
 	log.must(t, 0, []string{"45583464115695f2|e60a15c85c691ab8", "true"})
 	log.must(t, 1, []string{"6258a554f446f0a7|4111d6d36a631a68", "true"})
 
-	mustMatch(t, out, 1, `\n\[success\]\s*\n---------\s*\nCount\:\s+2\s`)
+	stats := b.Stats()
+	if stats.All.Status[0].Status != "[success]" || stats.All.Status[0].Count != 2 {
+		t.Fatal("Unexpected stats:", stats)
+	}
 
 }
 
@@ -656,8 +659,10 @@ func TestResume(t *testing.T) {
 
 	b.Exit()
 
-	mustMatch(t, out, 1, `\n\[success\]\s*\n---------\s*\nCount\:\s+2\s`)
-	mustMatch(t, out, 1, `\nSkipped\:\s+1 from previous runs`)
+	stats := b.Stats()
+	if stats.All.Status[0].Status != "[success]" || stats.All.Status[0].Count != 2 || stats.Skipped != 1 {
+		t.Fatal("Unexpected stats:", stats)
+	}
 
 	log.mustLen(t, 2)
 	log.must(t, 0, []string{"6258a554f446f0a7|4111d6d36a631a68", "true"})
