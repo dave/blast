@@ -6,6 +6,27 @@ import (
 	"time"
 )
 
+func TestRand(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		r := randInt(-5, 5)
+		if r.(int) < -5 || r.(int) > 5 {
+			t.Fatal("Unexpected:", r)
+		}
+	}
+
+	for i := 0; i < 100; i++ {
+		r := randFloat(-5.0, 5.0)
+		if r.(float64) < -5.0 || r.(float64) > 5.0 {
+			t.Fatal("Unexpected:", r)
+		}
+	}
+
+	s := randString(10)
+	if len(s.(string)) != 10 {
+		t.Fatal("Unexpected:", s)
+	}
+}
+
 func TestRenderNil(t *testing.T) {
 	r, err := parseRenderer(nil)
 	if err != nil {
