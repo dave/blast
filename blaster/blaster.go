@@ -204,12 +204,6 @@ func (b *Blaster) Exit() {
 	b.cancel()
 }
 
-// Summary provides a simple summary of the completed run, and is returned by the Start method.
-type Summary struct {
-	Success int64
-	Fail    int64
-}
-
 // Command processes command line flags, loads the config and starts the blast run.
 func (b *Blaster) Command(ctx context.Context) error {
 
@@ -236,7 +230,7 @@ func (b *Blaster) Command(ctx context.Context) error {
 }
 
 // Start starts the blast run without processing any config.
-func (b *Blaster) Start(ctx context.Context) (Summary, error) {
+func (b *Blaster) Start(ctx context.Context) (Stats, error) {
 
 	if b.dataReader == nil && b.Resume {
 		panic("In resume mode, data must be specified!")
@@ -264,12 +258,11 @@ func (b *Blaster) Start(ctx context.Context) (Summary, error) {
 
 	err := b.start(ctx)
 
-	summary := Summary{
-		Success: b.metrics.all.total.success.Count(),
-		Fail:    b.metrics.all.total.fail.Count(),
-	}
+	return b.Stats(), err
+}
 
-	return summary, err
+func (b *Blaster) Stats() Stats {
+	return b.metrics.stats()
 }
 
 func (b *Blaster) start(ctx context.Context) error {
@@ -312,7 +305,7 @@ func (b *Blaster) start(ctx context.Context) error {
 		b.printf("Fatal error: %v\n", b.err)
 		return b.err
 	}
-
+	b.println("")
 	b.printStatus(true)
 	return nil
 }
