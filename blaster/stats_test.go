@@ -45,7 +45,7 @@ func TestStats_String(t *testing.T) {
 				DesiredRate:        22,
 				ActualRate:         23,
 				AverageConcurrency: 24,
-				Duration:           time.Second * 25,
+				Duration:           time.Second * 125,
 				Summary: &Total{
 					Started:     26,
 					Finished:    27,
@@ -75,7 +75,7 @@ func TestStats_String(t *testing.T) {
 				DesiredRate:        39,
 				ActualRate:         40,
 				AverageConcurrency: 41,
-				Duration:           time.Second * 142,
+				Duration:           time.Second * 4042,
 				Summary: &Total{
 					Started:     43,
 					Finished:    44,
@@ -94,10 +94,10 @@ func TestStats_String(t *testing.T) {
 					},
 					{
 						Status:      "b",
-						Count:       53,
-						Fraction:    0.54,
-						Mean:        time.Millisecond * 55,
-						NinetyFifth: time.Millisecond * 56,
+						Count:       0,
+						Fraction:    0,
+						Mean:        0,
+						NinetyFifth: 0,
 					},
 				},
 			},
@@ -111,7 +111,7 @@ Concurrency:      1 / 2 workers in use
 Desired rate:     (all)     39        22                
 Actual rate:      5         40        23                
 Avg concurrency:  6         41        24                
-Duration:         00:07     02:22     00:25             
+Duration:         00:07     1:07:22   02:05             
                                                 
 Total                                           
 -----                                           
@@ -130,9 +130,9 @@ Mean:             16.0 ms   51.0 ms   34.0 ms
                                                 
 b                                               
 -                                               
-Count:            18 (19%)  53 (54%)  36 (37%)  
-Mean:             20.0 ms   55.0 ms   38.0 ms           
-95th:             21.0 ms   56.0 ms   38.0 ms           
+Count:            18 (19%)  0         36 (37%)  
+Mean:             20.0 ms   -         38.0 ms           
+95th:             21.0 ms   -         38.0 ms           
 `
 	if s.String() != expected {
 		t.Fatal("Unexpected stat string:", s.String())
