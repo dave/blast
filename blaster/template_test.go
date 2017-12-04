@@ -30,10 +30,12 @@ func TestRender(t *testing.T) {
 			"{{.bar}}",
 			"c",
 			2,
+			time.Second,
 		},
 		"map": map[string]interface{}{
 			"baz": "{{.baz}}",
 			"d":   3,
+			"t":   time.Second,
 		},
 		"t": time.Second,
 	}
@@ -45,7 +47,7 @@ func TestRender(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := map[string]interface{}{"c": 1, "arr": []interface{}{"BAR", "c", 2}, "map": map[string]interface{}{"baz": "BAZ", "d": 3}, "str": "FOO", "a": "b", "t": nil}
+	expected := map[string]interface{}{"t": nil, "str": "FOO", "a": "b", "c": 1, "arr": []interface{}{"BAR", "c", 2, nil}, "map": map[string]interface{}{"d": 3, "t": nil, "baz": "BAZ"}}
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("Not expected: %#v.", out)
 	}
