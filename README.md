@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/dave/blast.svg?branch=master)](https://travis-ci.org/dave/blast) [![Go Report Card](https://goreportcard.com/badge/github.com/dave/blast)](https://goreportcard.com/report/github.com/dave/blast) <!--[![codecov](https://codecov.io/gh/dave/blast/branch/master/graph/badge.svg)](https://codecov.io/gh/dave/blast)-->
+[![Build Status](https://travis-ci.org/dave/blast.svg?branch=master)](https://travis-ci.org/dave/blast) [![Go Report Card](https://goreportcard.com/badge/github.com/dave/blast)](https://goreportcard.com/report/github.com/dave/blast) [![codecov](https://codecov.io/gh/dave/blast/branch/master/graph/badge.svg)](https://codecov.io/gh/dave/blast)
 
 
 
@@ -248,21 +248,23 @@ b := blaster.New(ctx, cancel)
 defer b.Exit()
 b.SetWorker(func() blaster.Worker {
 	return &blaster.ExampleWorker{
-		SendFunc: func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+		SendFunc: func(ctx context.Context, self *blaster.ExampleWorker, in map[string]interface{}) (map[string]interface{}, error) {
 			return map[string]interface{}{"status": 200}, nil
 		},
 	}
 })
 b.Headers = []string{"header"}
 b.SetData(strings.NewReader("foo\nbar"))
-summary, err := b.Start(ctx)
+stats, err := b.Start(ctx)
 if err != nil {
 	fmt.Println(err.Error())
 	return
 }
-fmt.Printf("%#v", summary)
+fmt.Printf("Success == 2: %v\n", stats.All.Summary.Success == 2)
+fmt.Printf("Fail == 0: %v", stats.All.Summary.Fail == 0)
 // Output:
-// blaster.Summary{Success:2, Fail:0}
+// Success == 2: true
+// Fail == 0: true
 ```
 
 ```go
@@ -271,28 +273,30 @@ b := blaster.New(ctx, cancel)
 defer b.Exit()
 b.SetWorker(func() blaster.Worker {
 	return &blaster.ExampleWorker{
-		SendFunc: func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+		SendFunc: func(ctx context.Context, self *blaster.ExampleWorker, in map[string]interface{}) (map[string]interface{}, error) {
 			return map[string]interface{}{"status": 200}, nil
 		},
 	}
 })
-b.Rate = 100
+b.Rate = 1000
 wg := &sync.WaitGroup{}
 wg.Add(1)
 go func() {
-	summary, err := b.Start(ctx)
+	stats, err := b.Start(ctx)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Printf("Fail: %d", summary.Fail)
+	fmt.Printf("Success > 10: %v\n", stats.All.Summary.Success > 10)
+	fmt.Printf("Fail == 0: %v", stats.All.Summary.Fail == 0)
 	wg.Done()
 }()
 <-time.After(time.Millisecond * 100)
 b.Exit()
 wg.Wait()
 // Output:
-// Fail: 0
+// Success > 10: true
+// Fail == 0: true
 ```
  
 To do
