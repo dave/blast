@@ -49,14 +49,17 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		ue, ok := err.(*url.Error)
 		switch {
 		case response != nil:
+			// notest
 			status = response.StatusCode
 		case ok && ue.Err == context.DeadlineExceeded:
 			status = "Timeout"
 		case ok && ue.Err == context.Canceled:
 			status = "Cancelled"
 		case ok:
+			// notest
 			status = ue.Err.Error()
 		default:
+			// notest
 			status = err.Error()
 		}
 		return map[string]interface{}{"status": status}, err
