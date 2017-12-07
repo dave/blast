@@ -18,6 +18,7 @@ import (
 
 // New returns a new dummy worker
 func New() blaster.Worker {
+	// notest
 	return &Worker{}
 }
 

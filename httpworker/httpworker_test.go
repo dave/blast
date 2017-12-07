@@ -122,6 +122,63 @@ func TestError(t *testing.T) {
 	}
 }
 
+func TestErrorDecodingPayload(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer ts.Close()
+
+	payload := map[string]interface{}{
+		"method": 1,
+	}
+	response, err := New().Send(context.Background(), payload)
+	expected := map[string]interface{}{
+		"status": "Error decoding payload",
+	}
+	if err == nil || !strings.Contains(err.Error(), "'method' expected type 'string', got unconvertible type 'int'") {
+		log.Fatalf("Unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(response, expected) {
+		t.Fatalf("Unexpected: %#v", response)
+	}
+}
+
+func TestErrorCreatingRequest(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer ts.Close()
+
+	payload := map[string]interface{}{
+		"method": " ",
+	}
+	response, err := New().Send(context.Background(), payload)
+	expected := map[string]interface{}{
+		"status": "Error creating request",
+	}
+	if err == nil || !strings.Contains(err.Error(), "invalid method") {
+		log.Fatalf("Unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(response, expected) {
+		t.Fatalf("Unexpected: %#v", response)
+	}
+}
+
+func TestUrlError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer ts.Close()
+
+	payload := map[string]interface{}{
+		"method": "a",
+	}
+	response, err := New().Send(context.Background(), payload)
+	expected := map[string]interface{}{
+		"status": "unsupported protocol scheme \"\"",
+	}
+	if err == nil || !strings.Contains(err.Error(), "a : unsupported protocol scheme") {
+		log.Fatalf("Unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(response, expected) {
+		t.Fatalf("Unexpected: %#v", response)
+	}
+}
+
 func TestErrorTimeout(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		<-time.After(time.Second)

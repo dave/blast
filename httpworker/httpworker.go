@@ -56,7 +56,6 @@ func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[stri
 		case ok && ue.Err == context.Canceled:
 			status = "Cancelled"
 		case ok:
-			// notest
 			status = ue.Err.Error()
 		default:
 			// notest
