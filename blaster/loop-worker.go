@@ -122,7 +122,7 @@ func (b *Blaster) send(ctx context.Context, w Worker, work workDef) error {
 		// the sending goroutine to exit.
 		cancel()
 		select {
-		case <-finished:
+		case <-finished: // notest
 			// Only continue when finished channel is closed - e.g. sending goroutine has exited.
 		case <-time.After(b.hardTimeout):
 			hardTimeoutExceeded = true
