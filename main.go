@@ -23,6 +23,8 @@ const debug = false
 
 func main() {
 
+	// notest
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	b := blaster.New(ctx, cancel)
