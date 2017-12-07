@@ -189,7 +189,7 @@ func TestErrorTimeout(t *testing.T) {
 		"method": "GET",
 		"url":    ts.URL,
 	}
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	response, err := New().Send(ctx, payload)
 	expected := map[string]interface{}{
 		"status": "Timeout",
@@ -200,6 +200,7 @@ func TestErrorTimeout(t *testing.T) {
 	if !reflect.DeepEqual(response, expected) {
 		t.Fatalf("Unexpected: %#v", response)
 	}
+	cancel()
 }
 
 func TestErrorCancel(t *testing.T) {

@@ -203,7 +203,7 @@ func TestErrorTimeout(t *testing.T) {
 		"method": "GET",
 		"url":    ts.URL,
 	}
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	w := New()
 	w.(*Worker).client = http.DefaultClient
 	response, err := w.Send(ctx, payload)
@@ -216,6 +216,7 @@ func TestErrorTimeout(t *testing.T) {
 	if !reflect.DeepEqual(response, expected) {
 		t.Fatalf("Unexpected: %#v", response)
 	}
+	cancel()
 }
 
 func TestErrorCancel(t *testing.T) {
