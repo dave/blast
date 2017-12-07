@@ -73,6 +73,7 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 			default:
 				// notest
 				// if main loop is busy, skip this tick
+				continue
 			}
 		}
 	}()
