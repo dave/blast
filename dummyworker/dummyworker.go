@@ -32,6 +32,8 @@ type Worker struct {
 // Start satisfies the blaster.Starter interface
 func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 
+	// notest
+
 	var config workerConfig
 	if err := mapstructure.Decode(raw, &config); err != nil {
 		return err
@@ -51,6 +53,8 @@ func (w *Worker) Start(ctx context.Context, raw map[string]interface{}) error {
 
 // Send satisfies the blaster.Worker interface
 func (w *Worker) Send(ctx context.Context, raw map[string]interface{}) (map[string]interface{}, error) {
+
+	// notest
 
 	var payload payloadConfig
 	if err := mapstructure.Decode(raw, &payload); err != nil {
