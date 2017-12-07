@@ -261,6 +261,7 @@ func (b *Blaster) Start(ctx context.Context) (Stats, error) {
 	return b.Stats(), err
 }
 
+// Stats returns a snapshot of the metrics (as is printed during interactive execution).
 func (b *Blaster) Stats() Stats {
 	return b.metrics.stats()
 }

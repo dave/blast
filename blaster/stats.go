@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Stats is a snapshot of the metrics (as is printed during interactive execution).
 type Stats struct {
 	ConcurrencyCurrent int
 	ConcurrencyMaximum int
@@ -17,6 +18,7 @@ type Stats struct {
 	Segments           []*Segment
 }
 
+// Segment is a rate segment - a new segment is created each time the rate is changed.
 type Segment struct {
 	DesiredRate        float64
 	ActualRate         float64
@@ -26,6 +28,7 @@ type Segment struct {
 	Status             []*Status
 }
 
+// Total is the summary of all requests in this segment
 type Total struct {
 	Started     int64
 	Finished    int64
@@ -35,6 +38,7 @@ type Total struct {
 	NinetyFifth time.Duration
 }
 
+// Status is a summary of all requests that returned a specific status
 type Status struct {
 	Status      string
 	Count       int64
@@ -118,6 +122,7 @@ func (m *metricsDef) stats() Stats {
 	return s
 }
 
+// String returns a string representation of the stats (as is printed during interactive execution).
 func (s Stats) String() string {
 	buf := &bytes.Buffer{}
 	w := tabwriter.NewWriter(buf, 0, 0, 2, ' ', 0)
