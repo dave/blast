@@ -24,6 +24,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestMetricsSegmentDuration(t *testing.T) {
+	m := &metricsSegment{
+		start: time.Date(2017, 1, 1, 1, 1, 1, 1, time.UTC),
+		end:   time.Date(2017, 1, 1, 1, 1, 2, 1, time.UTC),
+	}
+	if m.duration() != time.Second {
+		t.Fatalf("Unexpected: %v", m.duration())
+	}
+}
+
+func TestRenderMapNotMap(t *testing.T) {
+	r, _ := parseRenderer("")
+	_, err := renderMap(r, nil)
+	if err.Error() != "rendered template not a map" {
+		t.Fatalf("Unexpected: %v", err)
+	}
+}
+
 func TestPrintStatus(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
