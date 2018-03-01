@@ -16,7 +16,13 @@ func (b *Blaster) startTickerLoop(ctx context.Context) {
 			ticker = &time.Ticker{} // empty *time.Ticker will have nil C, so block forever.
 			return
 		}
-		ticker = time.NewTicker(time.Second / time.Duration(b.Rate/float64(len(b.PayloadVariants))))
+		ticksPerSecond := b.Rate/float64(len(b.PayloadVariants))
+		ticksPerMs := ticksPerSecond / 1000.0
+		ticksPerUs := ticksPerMs / 1000.0
+		ticksPerNs := ticksPerUs / 1000.0
+		nsPerTick := 1.0 / ticksPerNs
+		
+		ticker = time.NewTicker(time.Nanosecond * time.Duration(nsPerTick))
 	}
 
 	changeRate := func(rate float64) {
